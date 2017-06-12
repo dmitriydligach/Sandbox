@@ -1,4 +1,4 @@
-export MODEL_DIR=/Users/Dima/Temp/Model
+export MODEL_DIR=/home/dima/Temp/Model
 mkdir -p $MODEL_DIR
 
 python -m bin.train \

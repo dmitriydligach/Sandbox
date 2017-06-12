@@ -1,13 +1,12 @@
-export MODEL_DIR=/Users/Dima/Temp/Model
-export DATA_PATH=/Users/Dima/Temp
+export MODEL_DIR=/home/dima/Temp/Model
+export DATA_PATH=/home/dima/Data/Thyme/Neural/Seq2Seq/TfSeq2Seq
 
-export VOCAB_SOURCE=${DATA_PATH}/input_vocabulary.txt
-export VOCAB_TARGET=${DATA_PATH}/output_vocabulary.txt
-export TRAIN_SOURCES=${DATA_PATH}/input.txt
-export TRAIN_TARGETS=${DATA_PATH}/output.txt
+export VOCAB_SOURCE=${DATA_PATH}/source_vocabulary.txt
+export VOCAB_TARGET=${DATA_PATH}/target_vocabulary.txt
+export TRAIN_SOURCES=${DATA_PATH}/train_source.txt
+export TRAIN_TARGETS=${DATA_PATH}/train_target.txt
 
-export DEV_SOURCES=${DATA_PATH}/input.txt
-export DEV_TARGETS=${DATA_PATH}/output.txt
+export DEV_SOURCES=${DATA_PATH}/dev_source.txt
+export DEV_TARGETS=${DATA_PATH}/dev_target.txt
 
-export DEV_TARGETS_REF=${DATA_PATH}/...
-export TRAIN_STEPS=1000
+export TRAIN_STEPS=10000
