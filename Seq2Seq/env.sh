@@ -9,4 +9,4 @@ export TRAIN_TARGETS=${DATA_PATH}/train_target.txt
 export DEV_SOURCES=${DATA_PATH}/dev_source.txt
 export DEV_TARGETS=${DATA_PATH}/dev_target.txt
 
-export TRAIN_STEPS=10000
+export TRAIN_STEPS=10000000
