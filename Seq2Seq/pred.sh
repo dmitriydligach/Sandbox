@@ -1,4 +1,4 @@
-export PRED_DIR=/Users/Dima/Temp/Predictions
+export PRED_DIR=/home/dima/Temp/Predictions
 mkdir -p ${PRED_DIR}
 
 python -m bin.infer \

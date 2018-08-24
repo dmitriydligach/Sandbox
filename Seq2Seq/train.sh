@@ -3,9 +3,9 @@ mkdir -p $MODEL_DIR
 
 python -m bin.train \
   --config_paths="
-      /Users/Dima/Git/Sandbox/Seq2Seq/nmt_small.yml,
-      /Users/Dima/Git/Sandbox/Seq2Seq/train_seq2seq.yml,
-      /Users/Dima/Git/Sandbox/Seq2Seq/text_metrics_bpe.yml" \
+      /home/dima/Git/Sandbox/Seq2Seq/nmt_small.yml,
+      /home/dima/Git/Sandbox/Seq2Seq/train_seq2seq.yml,
+      /home/dima/Git/Sandbox/Seq2Seq/text_metrics_bpe.yml" \
   --model_params "
       vocab_source: $VOCAB_SOURCE
       vocab_target: $VOCAB_TARGET" \
