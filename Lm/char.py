@@ -18,8 +18,10 @@ bke.set_session(s)
 import keras, random, sys
 from keras import layers
 
-maxlen = 60 # char sequence length
-step = 3    # sample new sequence very 3 chars
+maxlen = 60   # char sequence length
+step = 3      # sample new sequence very 3 chars
+epochs = 60   # train for this many epochs
+samples = 400 # number of predictions to generate
 
 def get_corpus():
   """Raw corpus"""
@@ -68,6 +70,7 @@ def get_model(num_features):
 def sample(preds, temperature=1.0):
   """Reweight the prob distribution and sample a char"""
 
+  # preds shape: (len(chars),)
   preds = np.asarray(preds).astype('float64')
   preds = np.log(preds) / temperature
   exp_preds = np.exp(preds)
@@ -76,41 +79,67 @@ def sample(preds, temperature=1.0):
 
   return np.argmax(probas)
 
-def train_and_generate(model, x, y, chars, char_indices):
+def generate_samples(model,
+                     seed,
+                     temperature,
+                     chars,
+                     char2index):
+  """Generate n new characters from the model"""
+
+  print('temperature:', temperature)
+  sys.stdout.write(seed)
+
+  generated_text = seed
+
+  for i in range(samples):
+
+    # vectorize what we have so far
+    sampled = np.zeros((1, maxlen, len(chars)))
+    for t, char in enumerate(generated_text):
+        sampled[0, t, char2index[char]] = 1.
+
+    # feed it into the model
+    preds = model.predict(sampled)[0]
+
+    # determine what character got predicted
+    next_index = sample(preds, temperature)
+    next_char = chars[next_index]
+
+    # add new character to the text
+    generated_text = generated_text + next_char
+    generated_text = generated_text[1:]
+
+    sys.stdout.write(next_char)
+    sys.stdout.flush()
+
+  print()
+
+def train_and_generate(model, x, y, chars, char2index):
   """Train and generate now"""
 
-  for epoch in range(1, 60):
+  for epoch in range(1, epochs):
 
-      model.fit(x, y, batch_size=128, epochs=1)
+    model.fit(x, y, batch_size=128, epochs=1)
 
-      start_index = random.randint(0, len(text) - maxlen - 1)
-      generated_text = text[start_index: start_index + maxlen]
-      print('seed:' + generated_text)
+    # pick a random seed sequence of characters
+    start_index = random.randint(0, len(text) - maxlen - 1)
+    seed = text[start_index: start_index + maxlen]
+    print('seed:' + seed)
 
-      for temperature in [0.2, 0.5, 1.0, 1.2]:
-          print('temperature:', temperature)
-          sys.stdout.write(generated_text)
-
-          # We generate 400 characters
-          for i in range(400):
-              sampled = np.zeros((1, maxlen, len(chars)))
-              for t, char in enumerate(generated_text):
-                  sampled[0, t, char_indices[char]] = 1.
-
-              preds = model.predict(sampled, verbose=0)[0]
-              next_index = sample(preds, temperature)
-              next_char = chars[next_index]
-
-              generated_text += next_char
-              generated_text = generated_text[1:]
-
-              sys.stdout.write(next_char)
-              sys.stdout.flush()
-          print()
+    for temperature in [0.2, 0.5, 1.0, 1.2]:
+        generate_samples(
+          model,
+          seed,
+          temperature,
+          chars,
+          char2index)
 
 if __name__ == "__main__":
 
   text = get_corpus()
+  num_features = len(set(text))
+  uniq_chars = sorted(list(set(text)))
+
   char2index, x, y = make_training_data(text)
-  model = get_model(len(set(text)))
-  train_and_generate(model, x, y, sorted(list(set(text))), char2index)
+  model = get_model(num_features)
+  train_and_generate(model, x, y, uniq_chars, char2index)
