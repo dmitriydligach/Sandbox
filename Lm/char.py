@@ -31,7 +31,13 @@ def get_corpus():
       origin='https://s3.amazonaws.com/text-datasets/nietzsche.txt')
   return open(path).read().lower()
 
-def make_training_data(text):
+def make_char_alphabet(text):
+  """Map characters to integers"""
+
+  chars = sorted(list(set(text)))
+  return dict((char, chars.index(char)) for char in chars)
+
+def make_training_data(text, char2int):
   """Make x and y"""
 
   sequences = [] # sequences of maxlen characters
@@ -41,20 +47,17 @@ def make_training_data(text):
       sequences.append(text[i: i + maxlen])
       targets.append(text[i + maxlen])
 
-  chars = sorted(list(set(text)))
-  char2index = dict((char, chars.index(char)) for char in chars)
-
   # vectorize sequences; make a tensor of the following shape:
-  # (samples, time_steps, features) -> (samples, maxlen, len(chars))
-  x = np.zeros((len(sequences), maxlen, len(chars)), dtype=np.bool)
-  y = np.zeros((len(sequences), len(chars)), dtype=np.bool)
+  # (samples, time_steps, features) -> (samples, maxlen, uniq_chars))
+  x = np.zeros((len(sequences), maxlen, len(char2int)), dtype=np.bool)
+  y = np.zeros((len(sequences), len(char2int)), dtype=np.bool)
 
   for n, sequence in enumerate(sequences):
       for time_step, char in enumerate(sequence):
-          x[n, time_step, char2index[char]] = 1
-      y[n, char2index[targets[n]]] = 1
+          x[n, time_step, char2int[char]] = 1
+      y[n, char2int[targets[n]]] = 1
 
-  return char2index, x, y
+  return x, y
 
 def get_model(num_features):
   """Model that takes (time_steps, features) as input"""
@@ -83,7 +86,7 @@ def generate_samples(model,
                      seed,
                      temperature,
                      chars,
-                     char2index):
+                     char2int):
   """Generate n new characters from the model"""
 
   print('temperature:', temperature)
@@ -96,7 +99,7 @@ def generate_samples(model,
     # vectorize what we have so far
     sampled = np.zeros((1, maxlen, len(chars)))
     for t, char in enumerate(generated_text):
-        sampled[0, t, char2index[char]] = 1.
+        sampled[0, t, char2int[char]] = 1.
 
     # feed it into the model
     preds = model.predict(sampled)[0]
@@ -114,7 +117,7 @@ def generate_samples(model,
 
   print()
 
-def train_and_generate(model, x, y, chars, char2index):
+def train_and_generate(model, x, y, chars, char2int):
   """Train and generate now"""
 
   for epoch in range(1, epochs):
@@ -132,14 +135,15 @@ def train_and_generate(model, x, y, chars, char2index):
           seed,
           temperature,
           chars,
-          char2index)
+          char2int)
 
 if __name__ == "__main__":
 
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
+  char2int = make_char_alphabet(text)
 
-  char2index, x, y = make_training_data(text)
+  x, y = make_training_data(text, char2int)
   model = get_model(num_features)
-  train_and_generate(model, x, y, uniq_chars, char2index)
+  train_and_generate(model, x, y, uniq_chars, char2int)
