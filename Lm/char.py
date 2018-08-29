@@ -18,16 +18,41 @@ bke.set_session(s)
 import keras, random, sys
 from keras import layers
 
-# Length of extracted character sequences
-maxlen = 60
-# We sample a new sequence every `step` characters
-step = 3
+maxlen = 60 # char sequence length
+step = 3    # sample new sequence very 3 chars
 
-# ignore sklearn warnings
-def warn(*args, **kwargs):
-  pass
-import warnings
-warnings.warn = warn
+def get_corpus():
+  """Raw corpus"""
+
+  path = keras.utils.get_file(
+      'nietzsche.txt',
+      origin='https://s3.amazonaws.com/text-datasets/nietzsche.txt')
+  return open(path).read().lower()
+
+def make_training_data(text):
+  """Make x and y"""
+
+  sequences = [] # sequences of maxlen characters
+  targets = []   # char the follows each sequence above
+
+  for i in range(0, len(text) - maxlen, step):
+      sequences.append(text[i: i + maxlen])
+      targets.append(text[i + maxlen])
+
+  chars = sorted(list(set(text)))
+  char2index = dict((char, chars.index(char)) for char in chars)
+
+  # vectorize sequences; make a tensor of the following shape:
+  # (samples, time_steps, features) -> (samples, maxlen, len(chars))
+  x = np.zeros((len(sequences), maxlen, len(chars)), dtype=np.bool)
+  y = np.zeros((len(sequences), len(chars)), dtype=np.bool)
+
+  for n, sequence in enumerate(sequences):
+      for time_step, char in enumerate(sequence):
+          x[n, time_step, char2index[char]] = 1
+      y[n, char2index[targets[n]]] = 1
+
+  return char2index, x, y
 
 def get_model(chars):
   """Model definition"""
@@ -87,47 +112,9 @@ def train_and_generate(model, x, y, chars, char_indices):
               sys.stdout.flush()
           print()
 
-def get_corpus():
-  """Raw corpus"""
-
-  path = keras.utils.get_file(
-      'nietzsche.txt',
-      origin='https://s3.amazonaws.com/text-datasets/nietzsche.txt')
-  return open(path).read().lower()
-
-def get_training_data(text):
-  """Make x and y"""
-
-  # This holds our extracted sequences
-  sentences = []
-  # This holds the targets (the follow-up characters)
-  next_chars = []
-
-  for i in range(0, len(text) - maxlen, step):
-      sentences.append(text[i: i + maxlen])
-      next_chars.append(text[i + maxlen])
-  print('Number of sequences:', len(sentences))
-
-  # List of unique characters in the corpus
-  chars = sorted(list(set(text)))
-  print('Unique characters:', len(chars))
-  # Dictionary mapping unique characters to their index in `chars`
-  char_indices = dict((char, chars.index(char)) for char in chars)
-
-  # Next, one-hot encode the characters into binary arrays.
-  print('Vectorization...')
-  x = np.zeros((len(sentences), maxlen, len(chars)), dtype=np.bool)
-  y = np.zeros((len(sentences), len(chars)), dtype=np.bool)
-  for i, sentence in enumerate(sentences):
-      for t, char in enumerate(sentence):
-          x[i, t, char_indices[char]] = 1
-      y[i, char_indices[next_chars[i]]] = 1
-
-  return x, y, char_indices
-
 if __name__ == "__main__":
 
   text = get_corpus()
-  x, y, char_indices = get_training_data(text)
-  model = get_model(sorted(list(set(text))))
-  train_and_generate(model, x, y, sorted(list(set(text))), char_indices)
+  x, y, char_indices = make_training_data(text)
+  # model = get_model(sorted(list(set(text))))
+  # train_and_generate(model, x, y, sorted(list(set(text))), char_indices)
