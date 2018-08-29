@@ -54,12 +54,12 @@ def make_training_data(text):
 
   return char2index, x, y
 
-def get_model(chars):
-  """Model definition"""
+def get_model(num_features):
+  """Model that takes (time_steps, features) as input"""
 
   model = keras.models.Sequential()
-  model.add(layers.LSTM(128, input_shape=(maxlen, len(chars))))
-  model.add(layers.Dense(len(chars), activation='softmax'))
+  model.add(layers.LSTM(128, input_shape=(maxlen, num_features)))
+  model.add(layers.Dense(num_features, activation='softmax'))
   optimizer = keras.optimizers.RMSprop(lr=0.01)
   model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
@@ -80,19 +80,15 @@ def train_and_generate(model, x, y, chars, char_indices):
   """Train and generate now"""
 
   for epoch in range(1, 60):
-      print('epoch', epoch)
-      # Fit the model for 1 epoch on the available training data
-      model.fit(x, y,
-                batch_size=128,
-                epochs=1)
 
-      # Select a text seed at random
+      model.fit(x, y, batch_size=128, epochs=1)
+
       start_index = random.randint(0, len(text) - maxlen - 1)
       generated_text = text[start_index: start_index + maxlen]
-      print('--- Generating with seed: "' + generated_text + '"')
+      print('seed:' + generated_text)
 
       for temperature in [0.2, 0.5, 1.0, 1.2]:
-          print('------ temperature:', temperature)
+          print('temperature:', temperature)
           sys.stdout.write(generated_text)
 
           # We generate 400 characters
@@ -115,6 +111,6 @@ def train_and_generate(model, x, y, chars, char_indices):
 if __name__ == "__main__":
 
   text = get_corpus()
-  x, y, char_indices = make_training_data(text)
-  # model = get_model(sorted(list(set(text))))
-  # train_and_generate(model, x, y, sorted(list(set(text))), char_indices)
+  char2index, x, y = make_training_data(text)
+  model = get_model(len(set(text)))
+  train_and_generate(model, x, y, sorted(list(set(text))), char2index)
