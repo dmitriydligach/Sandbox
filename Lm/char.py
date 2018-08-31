@@ -15,20 +15,13 @@ s = tf.Session(graph=tf.get_default_graph())
 bke.set_session(s)
 
 # the rest of the imports
-import keras, random, sys
+import keras, random, sys, configparser
 from keras import layers
-
-maxlen = 60   # char sequence length
-step = 3      # sample new sequence very 3 chars
-epochs = 60   # train for this many epochs
-samples = 400 # number of predictions to generate
 
 def get_corpus():
   """Raw corpus"""
 
-  path = keras.utils.get_file(
-      'nietzsche.txt',
-      origin='https://s3.amazonaws.com/text-datasets/nietzsche.txt')
+  path = cfg.get('args', 'corpus')
   return open(path).read().lower()
 
 def make_char_alphabet(text):
@@ -43,6 +36,7 @@ def make_training_data(text, char2int):
   sequences = [] # sequences of maxlen characters
   targets = []   # char the follows each sequence above
 
+  step = cfg.getint('args', 'step')
   for i in range(0, len(text) - maxlen, step):
       sequences.append(text[i: i + maxlen])
       targets.append(text[i + maxlen])
@@ -93,9 +87,9 @@ def generate_samples(model,
   sys.stdout.write(seed)
 
   generated_text = seed
+  samples = cfg.getint('args', 'samples')
 
   for i in range(samples):
-
     # vectorize what we have so far
     sampled = np.zeros((1, maxlen, len(chars)))
     for t, char in enumerate(generated_text):
@@ -120,8 +114,9 @@ def generate_samples(model,
 def train_and_generate(model, x, y, chars, char2int):
   """Train and generate now"""
 
-  for epoch in range(1, epochs):
+  epochs = cfg.getint('args', 'step')
 
+  for epoch in range(1, epochs):
     model.fit(x, y, batch_size=128, epochs=1)
 
     # pick a random seed sequence of characters
@@ -138,6 +133,11 @@ def train_and_generate(model, x, y, chars, char2int):
           char2int)
 
 if __name__ == "__main__":
+
+  # global settings from config file
+  cfg = configparser.ConfigParser()
+  cfg.read(sys.argv[1])
+  maxlen = cfg.getint('args', 'maxlen')
 
   text = get_corpus()
   num_features = len(set(text))
