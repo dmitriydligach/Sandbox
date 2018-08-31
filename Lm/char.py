@@ -16,6 +16,7 @@ bke.set_session(s)
 
 # the rest of the imports
 import keras, random, sys, configparser
+import hurry.filesize
 from keras import layers
 
 def get_corpus():
@@ -33,6 +34,8 @@ def make_char_alphabet(text):
 def make_training_data(text, char2int):
   """Make x and y"""
 
+  maxlen = cfg.getint('args', 'maxlen') # chars in a sequence
+
   sequences = [] # sequences of maxlen characters
   targets = []   # char the follows each sequence above
 
@@ -43,7 +46,12 @@ def make_training_data(text, char2int):
 
   # vectorize sequences; make a tensor of the following shape:
   # (samples, time_steps, features) -> (samples, maxlen, uniq_chars))
+  items = len(sequences) * maxlen * len(char2int)
+  item_size_in_bytes = np.dtype(np.bool).itemsize
+  print('train tensor shape:', (len(sequences), maxlen, len(char2int)))
+  print('allocating:', hurry.filesize.size(items * item_size_in_bytes))
   x = np.zeros((len(sequences), maxlen, len(char2int)), dtype=np.bool)
+  print('train tensor size in bytes:', hurry.filesize.size(x.nbytes))
   y = np.zeros((len(sequences), len(char2int)), dtype=np.bool)
 
   for n, sequence in enumerate(sequences):
@@ -55,6 +63,8 @@ def make_training_data(text, char2int):
 
 def get_model(num_features):
   """Model that takes (time_steps, features) as input"""
+
+  maxlen = cfg.getint('args', 'maxlen') # chars in a sequence
 
   model = keras.models.Sequential()
   model.add(layers.LSTM(128, input_shape=(maxlen, num_features)))
@@ -82,6 +92,8 @@ def generate_samples(model,
                      chars,
                      char2int):
   """Generate n new characters from the model"""
+
+  maxlen = cfg.getint('args', 'maxlen') # chars in a sequence
 
   print('temperature:', temperature)
   sys.stdout.write(seed)
@@ -114,7 +126,8 @@ def generate_samples(model,
 def train_and_generate(model, x, y, chars, char2int):
   """Train and generate now"""
 
-  epochs = cfg.getint('args', 'step')
+  maxlen = cfg.getint('args', 'maxlen') # chars in a sequence
+  epochs = cfg.getint('args', 'step')   # epochs to train
 
   for epoch in range(1, epochs):
     model.fit(x, y, batch_size=128, epochs=1)
@@ -137,7 +150,6 @@ if __name__ == "__main__":
   # global settings from config file
   cfg = configparser.ConfigParser()
   cfg.read(sys.argv[1])
-  maxlen = cfg.getint('args', 'maxlen')
 
   text = get_corpus()
   num_features = len(set(text))
