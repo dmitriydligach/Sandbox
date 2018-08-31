@@ -131,11 +131,7 @@ def train_and_generate(model, x, y, chars, char2int):
 
   for epoch in range(1, epochs):
     model.fit(x, y, batch_size=128, epochs=1)
-
-    # pick a random seed sequence of characters
-    start_index = random.randint(0, len(text) - maxlen - 1)
-    seed = text[start_index: start_index + maxlen]
-    print('\nseed: %s' % seed)
+    seed = text[0]
 
     for temperature in [0.2, 0.5, 1.0, 1.2]:
         generate_samples(
