@@ -95,7 +95,7 @@ def generate_samples(model,
 
   maxlen = cfg.getint('args', 'maxlen') # chars in a sequence
 
-  print('temperature:', temperature)
+  sys.stdout.write('t = %f: ' % temperature)
   sys.stdout.write(seed)
 
   generated_text = seed
@@ -135,7 +135,7 @@ def train_and_generate(model, x, y, chars, char2int):
     # pick a random seed sequence of characters
     start_index = random.randint(0, len(text) - maxlen - 1)
     seed = text[start_index: start_index + maxlen]
-    print('seed:' + seed)
+    print('seed:', seed)
 
     for temperature in [0.2, 0.5, 1.0, 1.2]:
         generate_samples(
