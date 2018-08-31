@@ -4,9 +4,9 @@
 import numpy as np
 import random as rn
 import tensorflow as tf
-np.random.seed(1337)
-rn.seed(1337)
-tf.set_random_seed(1337)
+np.random.seed(100)
+rn.seed(100)
+tf.set_random_seed(100)
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['PYTHONHASHSEED'] = '0'
@@ -23,7 +23,7 @@ def get_corpus():
   """Raw corpus"""
 
   path = cfg.get('args', 'corpus')
-  return open(path).read().lower()
+  return open(path).read().lower().replace('\n', ' ')
 
 def make_char_alphabet(text):
   """Map characters to integers"""
@@ -135,7 +135,7 @@ def train_and_generate(model, x, y, chars, char2int):
     # pick a random seed sequence of characters
     start_index = random.randint(0, len(text) - maxlen - 1)
     seed = text[start_index: start_index + maxlen]
-    print('\nseed: %s', seed)
+    print('\nseed: %s' % seed)
 
     for temperature in [0.2, 0.5, 1.0, 1.2]:
         generate_samples(
