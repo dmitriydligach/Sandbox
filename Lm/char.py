@@ -152,12 +152,15 @@ def select_seed(text):
 def main():
   """Driver function"""
 
+  seqlen = cfg.getint('args', 'seqlen')
+  
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
   char2int = make_char_alphabet(text)
 
-  seed = select_seed(text)
+  # seed = select_seed(text)
+  seed = ' ' * seqlen
   print('seed: \'%s\'' % seed)
 
   x, y = make_training_data(text, char2int)
