@@ -99,13 +99,12 @@ def generate_samples(model,
   sys.stdout.write(seed)
 
   generated_text = seed
-  samples = cfg.getint('args', 'samples')
-
-  for i in range(samples):
+  for i in range(cfg.getint('args', 'samples')):
     # vectorize what we have so far
     sampled = np.zeros((1, seqlen, len(chars)))
+
     for t, char in enumerate(generated_text):
-        sampled[0, t, char2int[char]] = 1.
+      sampled[0, t, char2int[char]] = 1.
 
     # feed it into the model
     preds = model.predict(sampled)[0]
@@ -123,17 +122,17 @@ def generate_samples(model,
 
   print()
 
-def train_and_generate(model, x, y, chars, char2int):
+def train_and_generate(model, x, y, chars, char2int, seed):
   """Train and generate now"""
 
   seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
   epochs = cfg.getint('args', 'epochs') # epochs to train
 
   for epoch in range(1, epochs):
-    model.fit(x, y, batch_size=128, epochs=1)
-    seed = text[0]
+    print('\nepoch:', epoch)
+    model.fit(x, y, epochs=1, verbose=0)
 
-    for temperature in [0.2, 0.5, 1.0, 1.2]:
+    for temperature in [0.2, 0.5, 1.0]:
         generate_samples(
           model,
           seed,
@@ -141,17 +140,35 @@ def train_and_generate(model, x, y, chars, char2int):
           chars,
           char2int)
 
-if __name__ == "__main__":
+def select_seed(text):
+  """Pick the seed"""
 
-  # global settings from config file
-  cfg = configparser.ConfigParser()
-  cfg.read(sys.argv[1])
+  seqlen = cfg.getint('args', 'seqlen')
+  seed_start = random.randint(0, len(text) - seqlen - 1)
+  seed = text[seed_start: seed_start + seqlen]
+
+  return seed
+
+def main():
+  """Driver function"""
 
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
   char2int = make_char_alphabet(text)
 
+  seed = select_seed(text)
+  print('seed: \'%s\'' % seed)
+
   x, y = make_training_data(text, char2int)
   model = get_model(num_features)
-  train_and_generate(model, x, y, uniq_chars, char2int)
+  train_and_generate(model, x, y, uniq_chars, char2int, seed)
+
+if __name__ == "__main__":
+
+  # global settings from config file
+  cfg = configparser.ConfigParser()
+  cfg.read(sys.argv[1])
+
+  # driver function
+  main()
