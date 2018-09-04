@@ -23,7 +23,7 @@ def get_corpus():
   """Raw corpus"""
 
   path = cfg.get('args', 'corpus')
-  return open(path).read().lower().replace('\n', ' ')
+  return open(path).read().lower()
 
 def make_char_alphabet(text):
   """Map characters to integers"""
@@ -153,7 +153,7 @@ def main():
   """Driver function"""
 
   seqlen = cfg.getint('args', 'seqlen')
-  
+
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
