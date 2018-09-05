@@ -46,6 +46,7 @@ def make_training_data(text, char2int):
 
   # vectorize sequences; make a tensor of the following shape:
   # (samples, time_steps, features) -> (samples, seqlen, uniq_chars))
+
   items = len(sequences) * seqlen * len(char2int)
   item_size_in_bytes = np.dtype(np.bool).itemsize
   print('train tensor shape:', (len(sequences), seqlen, len(char2int)))
@@ -64,10 +65,9 @@ def make_training_data(text, char2int):
 def get_model(num_features):
   """Model that takes (time_steps, features) as input"""
 
-  seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
-
   model = keras.models.Sequential()
-  model.add(layers.LSTM(128, input_shape=(seqlen, num_features)))
+  # model.add(layers.LSTM(128, input_shape=(seqlen, num_features)))
+  model.add(layers.LSTM(128, input_dim=num_features))
   model.add(layers.Dense(num_features, activation='softmax'))
   optimizer = keras.optimizers.RMSprop(lr=0.01)
   model.compile(loss='categorical_crossentropy', optimizer=optimizer)
@@ -75,7 +75,7 @@ def get_model(num_features):
   return model
 
 def sample(preds, temperature=1.0):
-  """Reweight the prob distribution and sample a char"""
+  """Reweight the prob distribution and sample a character"""
 
   # preds shape: (len(chars),)
   preds = np.asarray(preds).astype('float64')
@@ -86,36 +86,56 @@ def sample(preds, temperature=1.0):
 
   return np.argmax(probas)
 
+def sample_init_seq(model, init_char, temp, chars, char2int):
+  """Sample a sequence of fixed length given a character"""
+
+  seqlen = cfg.getint('args', 'seqlen')
+  print()
+  text = init_char
+  for i in range(seqlen - len(text)):
+    vectorized = np.zeros((1, len(text), len(chars)))
+    for t, char in enumerate(text):
+      vectorized[0, t, char2int[char]] = 1.
+
+    preds = model.predict(vectorized)[0]
+    next_index = sample(preds, temp)
+    next_char = chars[next_index]
+    text = text + next_char
+
+  print('done forming init seed:', len(text))
+  print('init seed looks like this:', text)
+  print()
+  return text
+
 def generate_samples(model,
                      seed,
-                     temperature,
+                     temp,
                      chars,
                      char2int):
   """Generate n new characters from the model"""
 
-  seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
+  seqlen = cfg.getint('args', 'seqlen')
 
-  sys.stdout.write('\nt = %f: ' % temperature)
+  sys.stdout.write('\nt = %f: ' % temp)
   sys.stdout.write(seed)
 
-  generated_text = seed
-  for i in range(cfg.getint('args', 'samples')):
-    # vectorize what we have so far
-    sampled = np.zeros((1, seqlen, len(chars)))
+  text = seed
 
-    for t, char in enumerate(generated_text):
-      sampled[0, t, char2int[char]] = 1.
+  for i in range(cfg.getint('args', 'samples')):
+    vectorized = np.zeros((1, seqlen, len(chars)))
+    for t, char in enumerate(text):
+      vectorized[0, t, char2int[char]] = 1.
 
     # feed it into the model
-    preds = model.predict(sampled)[0]
+    preds = model.predict(vectorized)[0]
 
     # determine what character got predicted
-    next_index = sample(preds, temperature)
+    next_index = sample(preds, temp)
     next_char = chars[next_index]
 
     # add new character to the text
-    generated_text = generated_text + next_char
-    generated_text = generated_text[1:]
+    text = text + next_char
+    text = text[1:]
 
     sys.stdout.write(next_char)
     sys.stdout.flush()
@@ -131,6 +151,7 @@ def train_and_generate(model, x, y, chars, char2int, seed):
   for epoch in range(1, epochs):
     print('\nepoch:', epoch)
     model.fit(x, y, epochs=1, verbose=0)
+    seed = sample_init_seq(model, ' ', 1, chars, char2int)
 
     for temperature in [0.2, 0.5, 1.0]:
         generate_samples(
@@ -152,15 +173,12 @@ def select_seed(text):
 def main():
   """Driver function"""
 
-  seqlen = cfg.getint('args', 'seqlen')
-
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
   char2int = make_char_alphabet(text)
 
-  # seed = select_seed(text)
-  seed = ' ' * seqlen
+  seed = ' '
   print('seed: \'%s\'' % seed)
 
   x, y = make_training_data(text, char2int)
