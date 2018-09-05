@@ -34,10 +34,10 @@ def make_char_alphabet(text):
 def make_training_data(text, char2int):
   """Make x and y"""
 
-  seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
+  seqlen = cfg.getint('args', 'seqlen')
 
   sequences = [] # sequences of seqlen characters
-  targets = []   # char the follows each sequence above
+  targets = []   # char that follows each sequence above
 
   step = cfg.getint('args', 'step')
   for i in range(0, len(text) - seqlen, step):
@@ -73,7 +73,7 @@ def get_model(num_features):
 
   return model
 
-def sample(preds, temperature=1.0):
+def sample_char(preds, temperature=1.0):
   """Reweight the prob distribution and sample a character"""
 
   # preds shape: (len(chars),)
@@ -89,7 +89,7 @@ def sample_init_seq(model, init_char, temp, chars, char2int):
   """Sample a sequence of fixed length given a character"""
 
   seqlen = cfg.getint('args', 'seqlen')
-  print()
+
   text = init_char
   for i in range(seqlen - len(text)):
     vectorized = np.zeros((1, len(text), len(chars)))
@@ -97,13 +97,10 @@ def sample_init_seq(model, init_char, temp, chars, char2int):
       vectorized[0, t, char2int[char]] = 1.
 
     preds = model.predict(vectorized)[0]
-    next_index = sample(preds, temp)
+    next_index = sample_char(preds, temp)
     next_char = chars[next_index]
     text = text + next_char
 
-  print('done forming init seed:', len(text))
-  print('init seed looks like this:', text)
-  print()
   return text
 
 def generate_samples(model,
@@ -119,7 +116,6 @@ def generate_samples(model,
   sys.stdout.write(seed)
 
   text = seed
-
   for i in range(cfg.getint('args', 'samples')):
     vectorized = np.zeros((1, seqlen, len(chars)))
     for t, char in enumerate(text):
@@ -129,7 +125,7 @@ def generate_samples(model,
     preds = model.predict(vectorized)[0]
 
     # determine what character got predicted
-    next_index = sample(preds, temp)
+    next_index = sample_char(preds, temp)
     next_char = chars[next_index]
 
     # add new character to the text
@@ -149,7 +145,7 @@ def train_and_generate(model, x, y, chars, char2int, seed):
 
   for epoch in range(1, epochs):
     print('\nepoch:', epoch)
-    model.fit(x, y, epochs=1, verbose=1)
+    model.fit(x, y, batch_size=128, epochs=1, verbose=1)
     seed = sample_init_seq(model, ' ', 1, chars, char2int)
 
     for temperature in [0.2, 0.5, 1.0]:
@@ -166,7 +162,7 @@ def select_seed(text):
   seqlen = cfg.getint('args', 'seqlen')
   seed_start = random.randint(0, len(text) - seqlen - 1)
   seed = text[seed_start: seed_start + seqlen]
-
+  
   return seed
 
 def main():
