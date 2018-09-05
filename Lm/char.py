@@ -66,8 +66,7 @@ def get_model(num_features):
   """Model that takes (time_steps, features) as input"""
 
   model = keras.models.Sequential()
-  # model.add(layers.LSTM(128, input_shape=(seqlen, num_features)))
-  model.add(layers.LSTM(128, input_dim=num_features))
+  model.add(layers.LSTM(128, input_shape=(None, num_features)))
   model.add(layers.Dense(num_features, activation='softmax'))
   optimizer = keras.optimizers.RMSprop(lr=0.01)
   model.compile(loss='categorical_crossentropy', optimizer=optimizer)
@@ -150,7 +149,7 @@ def train_and_generate(model, x, y, chars, char2int, seed):
 
   for epoch in range(1, epochs):
     print('\nepoch:', epoch)
-    model.fit(x, y, epochs=1, verbose=0)
+    model.fit(x, y, epochs=1, verbose=1)
     seed = sample_init_seq(model, ' ', 1, chars, char2int)
 
     for temperature in [0.2, 0.5, 1.0]:
@@ -173,13 +172,11 @@ def select_seed(text):
 def main():
   """Driver function"""
 
+  seed = ' '
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
   char2int = make_char_alphabet(text)
-
-  seed = ' '
-  print('seed: \'%s\'' % seed)
 
   x, y = make_training_data(text, char2int)
   model = get_model(num_features)
