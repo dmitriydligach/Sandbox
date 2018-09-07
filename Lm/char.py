@@ -85,7 +85,16 @@ def sample_char(preds, temperature=1.0):
 
   return np.argmax(probas)
 
-def sample_init_seq(model, init_char, temp, chars, char2int):
+def select_init_seq(text):
+  """Pick a random substring from corpus"""
+
+  seqlen = cfg.getint('args', 'seqlen')
+  seed_start = random.randint(0, len(text) - seqlen - 1)
+  seed = text[seed_start: seed_start + seqlen]
+
+  return seed
+  
+def sample_init_seq(model, init_char, chars, char2int, temp=0.01):
   """Sample a sequence of fixed length given a character"""
 
   seqlen = cfg.getint('args', 'seqlen')
@@ -103,11 +112,11 @@ def sample_init_seq(model, init_char, temp, chars, char2int):
 
   return text
 
-def generate_samples(model,
-                     seed,
-                     temp,
-                     chars,
-                     char2int):
+def sample_seq(model,
+               seed,
+               chars,
+               char2int,
+               temp):
   """Generate n new characters from the model"""
 
   seqlen = cfg.getint('args', 'seqlen')
@@ -137,7 +146,7 @@ def generate_samples(model,
 
   print()
 
-def train_and_generate(model, x, y, chars, char2int, seed):
+def train_and_sample(model, x, y, chars, char2int, seed):
   """Train and generate now"""
 
   seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
@@ -145,25 +154,12 @@ def train_and_generate(model, x, y, chars, char2int, seed):
 
   for epoch in range(1, epochs):
     print('\nepoch:', epoch)
+
     model.fit(x, y, batch_size=128, epochs=1, verbose=1)
-    seed = sample_init_seq(model, ' ', 1, chars, char2int)
+    seed = sample_init_seq(model, ' ', chars, char2int)
 
-    for temperature in [0.2, 0.5, 1.0]:
-        generate_samples(
-          model,
-          seed,
-          temperature,
-          chars,
-          char2int)
-
-def select_seed(text):
-  """Pick the seed"""
-
-  seqlen = cfg.getint('args', 'seqlen')
-  seed_start = random.randint(0, len(text) - seqlen - 1)
-  seed = text[seed_start: seed_start + seqlen]
-  
-  return seed
+    for temp in [0.1, 0.5, 1.0]:
+        sample_seq(model, seed, chars, char2int, temp)
 
 def main():
   """Driver function"""
@@ -176,7 +172,7 @@ def main():
 
   x, y = make_training_data(text, char2int)
   model = get_model(num_features)
-  train_and_generate(model, x, y, uniq_chars, char2int, seed)
+  train_and_sample(model, x, y, uniq_chars, char2int, seed)
 
 if __name__ == "__main__":
 
