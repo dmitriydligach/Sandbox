@@ -85,7 +85,7 @@ def sample_char(preds, temperature=1.0):
 
   return np.argmax(probas)
 
-def select_init_seq(text):
+def pick_init_seq(text):
   """Pick a random substring from corpus"""
 
   seqlen = cfg.getint('args', 'seqlen')
@@ -93,7 +93,7 @@ def select_init_seq(text):
   seed = text[seed_start: seed_start + seqlen]
 
   return seed
-  
+
 def sample_init_seq(model, init_char, chars, char2int, temp=0.01):
   """Sample a sequence of fixed length given a character"""
 
@@ -146,17 +146,21 @@ def sample_seq(model,
 
   print()
 
-def train_and_sample(model, x, y, chars, char2int, seed):
+def train_and_sample(model, x, y, text, chars, char2int):
   """Train and generate now"""
 
   seqlen = cfg.getint('args', 'seqlen') # chars in a sequence
   epochs = cfg.getint('args', 'epochs') # epochs to train
 
+  # training loop; sample after each epoch
   for epoch in range(1, epochs):
-    print('\nepoch:', epoch)
+    model.fit(x, y, batch_size=128, epochs=1, verbose=0)
 
-    model.fit(x, y, batch_size=128, epochs=1, verbose=1)
-    seed = sample_init_seq(model, ' ', chars, char2int)
+    if cfg.get('args', 'initseq') == 'substring':
+      seed = pick_init_seq(text)
+    else:
+      seed = sample_init_seq(model, ' ', chars, char2int)
+    print('\nepoch: %d - seed: \'%s\'' % (epoch, seed))
 
     for temp in [0.1, 0.5, 1.0]:
         sample_seq(model, seed, chars, char2int, temp)
@@ -164,7 +168,6 @@ def train_and_sample(model, x, y, chars, char2int, seed):
 def main():
   """Driver function"""
 
-  seed = ' '
   text = get_corpus()
   num_features = len(set(text))
   uniq_chars = sorted(list(set(text)))
@@ -172,7 +175,7 @@ def main():
 
   x, y = make_training_data(text, char2int)
   model = get_model(num_features)
-  train_and_sample(model, x, y, uniq_chars, char2int, seed)
+  train_and_sample(model, x, y, text, uniq_chars, char2int)
 
 if __name__ == "__main__":
 
