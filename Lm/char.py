@@ -122,7 +122,7 @@ def sample_seq(model,
   seqlen = cfg.getint('args', 'seqlen')
 
   sys.stdout.write('\nt = %f: ' % temp)
-  sys.stdout.write(seed)
+  # sys.stdout.write(seed)
 
   text = seed
   for i in range(cfg.getint('args', 'samples')):
