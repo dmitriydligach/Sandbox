@@ -35,15 +35,14 @@ class DatasetProvider:
     return nltk.word_tokenize(text)
 
   def make_alphabet(self):
-    """Write unique corpus tokens to file"""
+    """Map words to ints and back"""
 
-    tokens = self.read_train_text()
-    counts = collections.Counter(tokens)
+    counts = collections.Counter(self.read_train_text())
 
+    index = 2
     self.token2int['padding'] = 0
     self.token2int['oov_word'] = 1
 
-    index = 2
     for token, count in counts.most_common(self.max_tokens):
       self.token2int[token] = index
       self.int2token[index] = token
@@ -52,6 +51,9 @@ class DatasetProvider:
       if count < self.min_tf:
         break
 
+    ts = [t for i, t in self.int2token.items()]
+    print('most frequent tokens:', ' '.join(ts[:50]))
+
   def text_to_int_seq(self):
     """Convert corpus to a list of integers"""
 
@@ -59,6 +61,7 @@ class DatasetProvider:
       if token in self.token2int:
         self.txt_as_ints.append(self.token2int[token])
       else:
+        # this shouldn't happen when training on all data
         self.txt_as_ints.append(self.token2int['oov_word'])
 
   def make_train_data(self):
@@ -90,4 +93,3 @@ if __name__ == "__main__":
   print('alphabet time:', t1 - t0)
 
   x, y = datprov.make_train_data()
-  print(x)
