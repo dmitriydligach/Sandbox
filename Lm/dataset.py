@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 
-import numpy, configparser, os, sys, collections, time, nltk
+# reproducible results
+import numpy as np
+import random as rn
+import tensorflow as tf
+np.random.seed(1337)
+rn.seed(1337)
+tf.set_random_seed(1337)
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ['PYTHONHASHSEED'] = '0'
+from keras import backend as bke
+s = tf.Session(graph=tf.get_default_graph())
+bke.set_session(s)
+
+import sys
 sys.dont_write_bytecode = True
+import configparser, collections, time, nltk
 
 class DatasetProvider:
   """Corpus for training a word-based language model"""
@@ -52,7 +67,7 @@ class DatasetProvider:
         break
 
     ts = [t for i, t in self.int2token.items()]
-    print('most frequent tokens:', ' '.join(ts[:50]))
+    print('most frequent tokens:', ' '.join(ts[:50]), '\n')
 
   def text_to_int_seq(self):
     """Convert corpus to a list of integers"""
@@ -77,7 +92,7 @@ class DatasetProvider:
       x.append(self.txt_as_ints[i: i + self.seq_len])
       y.append(self.txt_as_ints[i + self.seq_len])
 
-    return x, y
+    return np.array(x), np.array(y)
 
 if __name__ == "__main__":
 
