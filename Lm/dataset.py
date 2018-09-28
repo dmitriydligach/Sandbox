@@ -57,6 +57,8 @@ class DatasetProvider:
     index = 2
     self.token2int['padding'] = 0
     self.token2int['oov_word'] = 1
+    self.int2token[0] = 'padding'
+    self.int2token[1] = 'oov_word'
 
     for token, count in counts.most_common(self.max_tokens):
       self.token2int[token] = index
