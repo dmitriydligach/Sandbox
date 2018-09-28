@@ -61,8 +61,9 @@ def train():
     cfg.get('args', 'train'))
   step = cfg.getint('args', 'step')
   maxlen = cfg.getint('args', 'maxlen')
+  mintf = cfg.getint('args', 'mintf')
 
-  dp = DatasetProvider(corpus, step, maxlen, min_tf=3)
+  dp = DatasetProvider(corpus, step, maxlen, min_tf=mintf)
   x, y = dp.make_train_data()
   y = to_categorical(y, len(dp.token2int))
   print('x / y shapes:', x.shape, y.shape)
