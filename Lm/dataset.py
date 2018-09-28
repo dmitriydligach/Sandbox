@@ -41,7 +41,7 @@ class DatasetProvider:
     self.int2token = {}   # reverse index
 
     self.make_alphabet()
-    self.text_to_int_seq()
+    self.train_to_int_seq()
 
   def read_train_text(self):
     """Obtain corpus as list"""
@@ -62,22 +62,34 @@ class DatasetProvider:
       self.token2int[token] = index
       self.int2token[index] = token
       index = index + 1
-
       if count < self.min_tf:
         break
 
     ts = [t for i, t in self.int2token.items()]
-    print('most frequent tokens:', ' '.join(ts[:50]), '\n')
+    print('most frequent tokens:', ' '.join(ts[:50]))
+    print('vocabulary size:', len(self.token2int))
 
-  def text_to_int_seq(self):
-    """Convert corpus to a list of integers"""
+  def train_to_int_seq(self):
+    """Convert training corpus to a list of integers"""
 
     for token in self.read_train_text():
       if token in self.token2int:
         self.txt_as_ints.append(self.token2int[token])
       else:
-        # this shouldn't happen when training on all data
+        # e.g. low freqency tokens
         self.txt_as_ints.append(self.token2int['oov_word'])
+
+  def text_to_int_seq(self, text):
+    """Convert a text fragment to a list of integers"""
+
+    int_seq = []
+    for token in nltk.word_tokenize(text.lower()):
+      if token in self.token2int:
+        int_seq.append(self.token2int[token])
+      else:
+        int_seq.append(self.token2int['oov_word'])
+
+    return int_seq
 
   def make_train_data(self):
     """Make xs and ys to train on"""

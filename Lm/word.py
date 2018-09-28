@@ -22,6 +22,7 @@ import sklearn as sk
 from sklearn.metrics import f1_score
 import keras as k
 from keras.utils.np_utils import to_categorical
+from keras.preprocessing.sequence import pad_sequences
 from keras.models import Sequential
 from keras.layers.core import Dense
 from keras.layers.embeddings import Embedding
@@ -34,9 +35,8 @@ def print_config():
 
   for key, value in cfg.items('args'):
     print(key, '-', value)
-  print()
 
-def get_model(vocab_size, max_seq_len, num_targets):
+def get_model(vocab_size, max_seq_len):
   """Model definition"""
 
   model = Sequential()
@@ -45,13 +45,15 @@ def get_model(vocab_size, max_seq_len, num_targets):
                       output_dim=300,
                       input_length=max_seq_len))
   model.add(LSTM(cfg.getint('nn', 'units')))
-  model.add(Dense(num_targets, activation='softmax'))
+  model.add(Dense(vocab_size, activation='softmax'))
+
   model.compile(loss='categorical_crossentropy',
                 optimizer='rmsprop')
+  model.summary()
 
   return model
 
-def main():
+def train():
   """Driver function"""
 
   corpus = os.path.join(
@@ -60,18 +62,33 @@ def main():
   step = cfg.getint('args', 'step')
   maxlen = cfg.getint('args', 'maxlen')
 
-  dp = DatasetProvider(corpus, step, maxlen)
+  dp = DatasetProvider(corpus, step, maxlen, min_tf=3)
   x, y = dp.make_train_data()
   y = to_categorical(y, len(dp.token2int))
   print('x / y shapes:', x.shape, y.shape)
 
-  model = get_model(len(dp.token2int), maxlen, len(dp.token2int))
+  model = get_model(len(dp.token2int), maxlen)
   model.fit(x,
             y,
             epochs=cfg.getint('nn', 'epochs'),
             batch_size=cfg.getint('nn', 'batch'),
             verbose=1,
             validation_split=0.0)
+
+  return model, dp
+
+def generate(model, dataset_provider):
+  """Generate text sequences"""
+
+  seed = cfg.get('nn', 'seed')
+  maxlen = cfg.getint('args', 'maxlen')
+  x = dataset_provider.text_to_int_seq(seed)
+  print(x)
+  x = pad_sequences([x], maxlen=maxlen)
+  print(x.shape)
+
+  preds = model.predict(x)
+  print(preds.shape)
 
 if __name__ == "__main__":
 
@@ -80,4 +97,5 @@ if __name__ == "__main__":
   cfg.read(sys.argv[1])
   print_config()
 
-  main()
+  model, dataset_provider = train()
+  generate(model, dataset_provider)
