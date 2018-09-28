@@ -34,7 +34,7 @@ def print_config():
   """Print config file for content"""
 
   for key, value in cfg.items('args'):
-    print(key, '-', value)
+    print('%s: %s' % (key, value))
 
 def get_model(vocab_size, max_seq_len):
   """Model definition"""
@@ -78,18 +78,42 @@ def train():
 
   return model, dp
 
+def sample_word(preds, temperature=1.0):
+  """Reweight prob distribution and sample a token"""
+
+  preds = np.asarray(preds).astype('float64')
+  preds = np.log(preds) / temperature
+  exp_preds = np.exp(preds)
+  preds = exp_preds / np.sum(exp_preds)
+  probas = np.random.multinomial(1, preds, 1)
+
+  return np.argmax(probas)
+
 def generate(model, dataset_provider):
   """Generate text sequences"""
 
   seed = cfg.get('nn', 'seed')
   maxlen = cfg.getint('args', 'maxlen')
-  x = dataset_provider.text_to_int_seq(seed)
-  print(x)
-  x = pad_sequences([x], maxlen=maxlen)
-  print(x.shape)
 
-  preds = model.predict(x)
-  print(preds.shape)
+  generated_words = []
+  seq = dataset_provider.text_to_int_seq(seed)
+
+  for i in range(cfg.getint('nn', 'samples')):
+
+    if len(seq) < maxlen:
+      x = pad_sequences([seq], maxlen=maxlen)
+
+    preds = model.predict(x)[0]
+    next_index = sample_word(preds)
+    seq.append(next_index)
+
+    next_word = dataset_provider.int2token[next_index]
+    generated_words.append(next_word)
+
+    if len(seq) > maxlen:
+      seq = seq[1:]
+
+  return generated_words
 
 if __name__ == "__main__":
 
@@ -99,4 +123,6 @@ if __name__ == "__main__":
   print_config()
 
   model, dataset_provider = train()
-  generate(model, dataset_provider)
+  generated_words = generate(model, dataset_provider)
+
+  print(' '.join(generated_words))
