@@ -46,7 +46,9 @@ class DatasetProvider:
   def read_train_text(self):
     """Obtain corpus as list"""
 
-    text = open(self.path).read().lower()
+    # open(...).read() fails on large files
+    text = open(self.path).readline().lower()
+    print('done reading text')
     return nltk.word_tokenize(text)
 
   def make_alphabet(self):
