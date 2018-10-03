@@ -112,7 +112,8 @@ class DatasetProvider:
     x = [] # sequences of ints
     y = [] # targets
 
-    print('making training data...')
+    size = len(self.txt_as_ints) % float(self.step)
+    print('making %d training examples' % size)
 
     for i in range(
                0,
