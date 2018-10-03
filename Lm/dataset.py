@@ -92,7 +92,7 @@ class DatasetProvider:
       else:
         # e.g. low freqency tokens
         self.txt_as_ints.append(self.token2int['oov_word'])
-    print('done converting...')
+    print('done; total length:', len(self.txt_as_ints))
 
   def text_to_int_seq(self, text):
     """Convert a text fragment to a list of integers"""
@@ -113,10 +113,15 @@ class DatasetProvider:
     y = [] # targets
 
     print('making training data...')
+
     for i in range(
                0,
                len(self.txt_as_ints) - self.seq_len,
                self.step):
+
+      if len(x) % 1000000 == 0:
+        print('made 1M examples:', len(x))
+
       x.append(self.txt_as_ints[i: i + self.seq_len])
       y.append(self.txt_as_ints[i + self.seq_len])
 
