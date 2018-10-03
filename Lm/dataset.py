@@ -43,13 +43,17 @@ class DatasetProvider:
     self.make_alphabet()
     self.train_to_int_seq()
 
-  def read_train_text(self):
-    """Obtain corpus as list"""
+  def read_train_text(self, use_tokenizer=False):
+    """Obtain corpus as list. Split on spaces by default"""
 
     # open(...).read() fails on large files
+    # assume entire file is one line for now
     text = open(self.path).readline().lower()
-    print('done reading text')
-    return nltk.word_tokenize(text)
+    print('done reading text...')
+    if use_tokenizer:
+      return nltk.word_tokenize(text)
+    else:
+      return text.split()
 
   def make_alphabet(self):
     """Map words to ints and back"""
@@ -76,12 +80,14 @@ class DatasetProvider:
   def train_to_int_seq(self):
     """Convert training corpus to a list of integers"""
 
+    print('converting text to integers...')
     for token in self.read_train_text():
       if token in self.token2int:
         self.txt_as_ints.append(self.token2int[token])
       else:
         # e.g. low freqency tokens
         self.txt_as_ints.append(self.token2int['oov_word'])
+    print('done converting...')
 
   def text_to_int_seq(self, text):
     """Convert a text fragment to a list of integers"""
