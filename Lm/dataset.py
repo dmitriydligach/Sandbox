@@ -59,6 +59,7 @@ class DatasetProvider:
     """Map words to ints and back"""
 
     counts = collections.Counter(self.read_train_text())
+    print('done counting tokens...')
 
     index = 2
     self.token2int['padding'] = 0
