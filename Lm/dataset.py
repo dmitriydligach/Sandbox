@@ -119,8 +119,8 @@ class DatasetProvider:
                len(self.txt_as_ints) - self.seq_len,
                self.step):
 
-      if len(x) % 1000000 == 0:
-        print('made 1M examples:', len(x))
+      if len(x) % 10000000 == 0:
+        print('made 10M examples; total:', len(x))
 
       x.append(self.txt_as_ints[i: i + self.seq_len])
       y.append(self.txt_as_ints[i + self.seq_len])
