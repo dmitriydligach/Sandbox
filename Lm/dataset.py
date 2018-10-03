@@ -112,7 +112,7 @@ class DatasetProvider:
     x = [] # sequences of ints
     y = [] # targets
 
-    size = len(self.txt_as_ints) % float(self.step)
+    size = len(self.txt_as_ints) / float(self.step)
     print('making %d training examples' % size)
 
     for i in range(
@@ -120,8 +120,8 @@ class DatasetProvider:
                len(self.txt_as_ints) - self.seq_len,
                self.step):
 
-      if len(x) % 100000000 == 0:
-        print('made 100M examples; total:', len(x))
+      if len(x) % 25000000 == 0 and len(x) > 0:
+        print('made 25M; total now:', len(x))
 
       x.append(self.txt_as_ints[i: i + self.seq_len])
       y.append(self.txt_as_ints[i + self.seq_len])
