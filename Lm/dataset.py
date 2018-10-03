@@ -51,9 +51,13 @@ class DatasetProvider:
     text = open(self.path).readline().lower()
     print('done reading text...')
     if use_tokenizer:
-      return nltk.word_tokenize(text)
+      tokenized = nltk.word_tokenize(text)
+      print('done tokenizing...')
+      return tokenized
     else:
-      return text.split()
+      tokenized = text.split()
+      print('done tokenizing...')
+      return tokenized
 
   def make_alphabet(self):
     """Map words to ints and back"""
@@ -108,6 +112,7 @@ class DatasetProvider:
     x = [] # sequences of ints
     y = [] # targets
 
+    print('making training data...')
     for i in range(
                0,
                len(self.txt_as_ints) - self.seq_len,
@@ -115,6 +120,7 @@ class DatasetProvider:
       x.append(self.txt_as_ints[i: i + self.seq_len])
       y.append(self.txt_as_ints[i + self.seq_len])
 
+    print('done making training data...')
     return np.array(x), np.array(y)
 
 if __name__ == "__main__":
