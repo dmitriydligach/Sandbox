@@ -18,6 +18,9 @@ import sys
 sys.dont_write_bytecode = True
 import configparser, collections, time, nltk
 
+XFILE = 'x.txt'
+YFILE = 'y.txt'
+
 class DatasetProvider:
   """Corpus for training a word-based language model"""
 
@@ -79,7 +82,7 @@ class DatasetProvider:
         break
 
     ts = [t for i, t in self.int2token.items()]
-    print('most frequent tokens:', ' '.join(ts[:50]))
+    print('most frequent tokens:', ' '.join(ts[:15]))
     print('vocabulary size:', len(self.token2int))
 
   def train_to_int_seq(self):
@@ -138,24 +141,44 @@ class DatasetProvider:
   def make_and_save_train_data(self):
     """Make training data and save in file"""
 
-    size = len(self.txt_as_ints) / float(self.step)
-    print('making %d training examples' % size)
-
-    out_x = open('x.txt', 'w')
-    out_y = open('y.txt', 'w')
+    x_out = open(XFILE, 'w')
+    y_out = open(YFILE, 'w')
 
     for i in range(
                0,
                len(self.txt_as_ints) - self.seq_len,
                self.step):
-
       x = self.txt_as_ints[i: i + self.seq_len]
       y = self.txt_as_ints[i + self.seq_len]
-      out_x.write('%s\n' % ' '.join(map(str, x)))
-      out_y.write('%d\n' % y)
+      x_out.write('%s\n' % ' '.join(map(str, x)))
+      y_out.write('%d\n' % y)
 
-    out_x.close()
-    out_y.close()
+    x_out.close()
+    y_out.close()
+
+
+  def read_train_data_from_file(self, batch=10000):
+    """Generator to read training data in batches"""
+
+    line_num = 0
+
+    x_batch = []
+    y_batch = []
+
+    for x_line, y_line in zip(open(XFILE), open(YFILE)):
+
+      x = list(map(int, x_line.split()))
+      y = int(y_line.strip())
+
+      x_batch.append(x)
+      y_batch.append(y)
+
+      line_num += 1
+
+      if line_num % batch == 0:
+
+        yield np.array(x_batch), np.array(y_batch)
+        x_batch, y_batch = [], []
 
 if __name__ == "__main__":
 

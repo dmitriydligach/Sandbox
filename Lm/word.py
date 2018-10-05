@@ -64,20 +64,20 @@ def train():
   mintf = cfg.getint('args', 'mintf')
 
   dp = DatasetProvider(corpus, step, maxlen, min_tf=mintf)
+  model = get_model(len(dp.token2int), maxlen)
   dp.make_and_save_train_data()
 
-  # x, y = dp.make_train_data()
-  
-  y = to_categorical(y, len(dp.token2int))
-  print('x / y shapes:', x.shape, y.shape)
+  for x, y in dp.read_train_data_from_file():
 
-  model = get_model(len(dp.token2int), maxlen)
-  model.fit(x,
-            y,
-            epochs=cfg.getint('nn', 'epochs'),
-            batch_size=cfg.getint('nn', 'batch'),
-            verbose=1,
-            validation_split=0.0)
+    y = to_categorical(y, len(dp.token2int))
+    print('shapes of x and y:', x.shape, y.shape)
+
+    model.fit(x,
+              y,
+              epochs=cfg.getint('nn', 'epochs'),
+              batch_size=cfg.getint('nn', 'batch'),
+              verbose=1,
+              validation_split=0.0)
 
   return model, dp
 
