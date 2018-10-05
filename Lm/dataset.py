@@ -157,7 +157,7 @@ class DatasetProvider:
     y_out.close()
 
 
-  def read_train_data_from_file(self, batch=10000):
+  def read_train_data_from_file(self, batch=50000):
     """Generator to read training data in batches"""
 
     line_num = 0
@@ -169,16 +169,16 @@ class DatasetProvider:
 
       x = list(map(int, x_line.split()))
       y = int(y_line.strip())
-
       x_batch.append(x)
       y_batch.append(y)
 
       line_num += 1
-
       if line_num % batch == 0:
-
         yield np.array(x_batch), np.array(y_batch)
         x_batch, y_batch = [], []
+
+    # fetch remaining data
+    yield np.array(x_batch), np.array(y_batch)
 
 if __name__ == "__main__":
 
