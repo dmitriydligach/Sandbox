@@ -106,6 +106,12 @@ class DatasetProvider:
 
     return int_seq
 
+  def int_seq_to_text(self, int_seq):
+    """Convert a seq of ints to text"""
+
+    txt = [self.int2token[i] for i in int_seq]
+    return ' '.join(txt)
+
   def make_train_data(self):
     """Make xs and ys to train on"""
 
