@@ -144,6 +144,9 @@ class DatasetProvider:
     x_out = open(XFILE, 'w')
     y_out = open(YFILE, 'w')
 
+    size = len(self.txt_as_ints) / float(self.step)
+    print('making %d training examples' % size)
+
     for i in range(
                0,
                len(self.txt_as_ints) - self.seq_len,
@@ -153,9 +156,9 @@ class DatasetProvider:
       x_out.write('%s\n' % ' '.join(map(str, x)))
       y_out.write('%d\n' % y)
 
+    print('done making training data...')
     x_out.close()
     y_out.close()
-
 
   def read_train_data_from_file(self, batch=50000):
     """Generator to read training data in batches"""
