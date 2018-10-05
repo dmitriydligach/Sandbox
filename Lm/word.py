@@ -65,7 +65,6 @@ def train():
 
   dp = DatasetProvider(corpus, step, maxlen, min_tf=mintf)
   model = get_model(len(dp.token2int), maxlen)
-  dp.make_and_save_train_data()
 
   for x, y in dp.read_train_data_from_file():
 

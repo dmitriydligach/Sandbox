@@ -7,7 +7,7 @@ import tensorflow as tf
 np.random.seed(1337)
 rn.seed(1337)
 tf.set_random_seed(1337)
-import os
+import os, os.path
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 os.environ['PYTHONHASHSEED'] = '0'
 from keras import backend as bke
@@ -45,6 +45,9 @@ class DatasetProvider:
 
     self.make_alphabet()
     self.train_to_int_seq()
+
+    if not os.path.isfile(XFILE):
+      self.make_and_save_train_data()
 
   def read_train_text(self, use_tokenizer=False):
     """Obtain corpus as list. Split on spaces by default"""
@@ -95,7 +98,7 @@ class DatasetProvider:
       else:
         # e.g. low freqency tokens
         self.txt_as_ints.append(self.token2int['oov_word'])
-    print('done; total length:', len(self.txt_as_ints))
+    print('integer sequence length:', len(self.txt_as_ints))
 
   def text_to_int_seq(self, text):
     """Convert a text fragment to a list of integers"""
@@ -178,6 +181,7 @@ class DatasetProvider:
       line_num += 1
       if line_num % batch == 0:
         yield np.array(x_batch), np.array(y_batch)
+        print('fetched %d lines total...' % line_num)
         x_batch, y_batch = [], []
 
     # fetch remaining data
