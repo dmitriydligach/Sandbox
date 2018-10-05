@@ -69,7 +69,8 @@ def train():
   for x, y in dp.read_train_data_from_file():
 
     y = to_categorical(y, len(dp.token2int))
-    print('shapes of x and y:', x.shape, y.shape)
+    print('x shape:', x.shape)
+    print('y shape:', y.shape)    
 
     model.fit(x,
               y,

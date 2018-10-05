@@ -44,9 +44,9 @@ class DatasetProvider:
     self.int2token = {}   # reverse index
 
     self.make_alphabet()
-    self.train_to_int_seq()
 
     if not os.path.isfile(XFILE):
+      self.train_to_int_seq()
       self.make_and_save_train_data()
 
   def read_train_text(self, use_tokenizer=False):
@@ -186,6 +186,7 @@ class DatasetProvider:
 
     # fetch remaining data
     yield np.array(x_batch), np.array(y_batch)
+    print('fetched %d lines total...' % line_num)
 
 if __name__ == "__main__":
 
