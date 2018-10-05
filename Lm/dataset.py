@@ -113,7 +113,7 @@ class DatasetProvider:
     return ' '.join(txt)
 
   def make_train_data(self):
-    """Make xs and ys to train on"""
+    """Make xs and ys in memory to train on"""
 
     x = [] # sequences of ints
     y = [] # targets
@@ -134,6 +134,28 @@ class DatasetProvider:
 
     print('done making training data...')
     return np.array(x), np.array(y)
+
+  def make_and_save_train_data(self):
+    """Make training data and save in file"""
+
+    size = len(self.txt_as_ints) / float(self.step)
+    print('making %d training examples' % size)
+
+    out_x = open('x.txt', 'w')
+    out_y = open('y.txt', 'w')
+
+    for i in range(
+               0,
+               len(self.txt_as_ints) - self.seq_len,
+               self.step):
+
+      x = self.txt_as_ints[i: i + self.seq_len]
+      y = self.txt_as_ints[i + self.seq_len]
+      out_x.write('%s\n' % ' '.join(map(str, x)))
+      out_y.write('%d\n' % y)
+
+    out_x.close()
+    out_y.close()
 
 if __name__ == "__main__":
 
