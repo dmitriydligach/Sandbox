@@ -67,12 +67,16 @@ class DatasetProvider:
     # open(...).read() fails on large files
     # assume entire file is one line for now
     text = open(self.path).readline().lower()
+
     if use_tokenizer:
+      # this is super slow for large corpora
       tokenized = nltk.word_tokenize(text)
       print('done tokenizing...')
       return tokenized
     else:
       tokenized = text.split()
+      print('tokenized corpus memory footprint:',
+        hurry.filesize.size(sys.getsizeof(tokenized)))
       return tokenized
 
   def make_alphabet(self):
