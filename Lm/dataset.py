@@ -79,7 +79,8 @@ class DatasetProvider:
     """Map words to ints and back"""
 
     counts = collections.Counter(self.read_train_text())
-    print('done counting tokens...')
+    print('counter memory footprint:',
+      hurry.filesize.size(sys.getsizeof(counts)))
 
     index = 2
     self.token2int['padding'] = 0
