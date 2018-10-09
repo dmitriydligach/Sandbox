@@ -20,6 +20,7 @@ sys.dont_write_bytecode = True
 
 import sklearn as sk
 from sklearn.metrics import f1_score
+import hurry.filesize
 import keras as k
 from keras.utils.np_utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
@@ -65,12 +66,14 @@ def train():
 
   dp = DatasetProvider(corpus, step, maxlen, min_tf=mintf)
   dp.memory_footprint()
-  
+
   model = get_model(len(dp.token2int), maxlen)
 
   for x, y in dp.read_train_data_from_file():
 
     y = to_categorical(y, len(dp.token2int))
+    print('x memory footprint:', hurry.filesize.size(x.nbytes))
+    print('y memory footprint', hurry.filesize.size(y.nbytes))
     print('x shape:', x.shape)
     print('y shape:', y.shape)
 
