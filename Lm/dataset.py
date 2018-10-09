@@ -67,6 +67,8 @@ class DatasetProvider:
     # open(...).read() fails on large files
     # assume entire file is one line for now
     text = open(self.path).readline().lower()
+    print('raw corpus memory footprint:',
+      hurry.filesize.size(sys.getsizeof(text)))
 
     if use_tokenizer:
       # this is super slow for large corpora
