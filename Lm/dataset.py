@@ -127,29 +127,6 @@ class DatasetProvider:
     txt = [self.int2token[i] for i in int_seq]
     return ' '.join(txt)
 
-  def make_train_data(self):
-    """Make xs and ys in memory to train on"""
-
-    x = [] # sequences of ints
-    y = [] # targets
-
-    size = len(self.txt_as_ints) / float(self.step)
-    print('making %d training examples' % size)
-
-    for i in range(
-               0,
-               len(self.txt_as_ints) - self.seq_len,
-               self.step):
-
-      if len(x) % 25000000 == 0 and len(x) > 0:
-        print('made 25M; total now:', len(x))
-
-      x.append(self.txt_as_ints[i: i + self.seq_len])
-      y.append(self.txt_as_ints[i + self.seq_len])
-
-    print('done making training data...')
-    return np.array(x), np.array(y)
-
   def make_and_save_train_data(self):
     """Make training data and save in file"""
 
