@@ -17,6 +17,7 @@ bke.set_session(s)
 import sys
 sys.dont_write_bytecode = True
 import configparser, collections, time, nltk
+import hurry.filesize
 
 XFILE = 'x.txt'
 YFILE = 'y.txt'
@@ -48,6 +49,16 @@ class DatasetProvider:
     if not os.path.isfile(XFILE):
       self.train_to_int_seq()
       self.make_and_save_train_data()
+
+  def memory_footprint(self):
+    """Display memory footprint of data members"""
+
+    print('txt_as_ints footprint:',
+      hurry.filesize.size(sys.getsizeof(self.txt_as_ints)))
+    print('token2int footprint:',
+      hurry.filesize.size(sys.getsizeof(self.token2int)))
+    print('int2token footprint',
+      hurry.filesize.size(sys.getsizeof(self.int2token)))
 
   def read_train_text(self, use_tokenizer=False):
     """Obtain corpus as list. Split on spaces by default"""
@@ -84,8 +95,6 @@ class DatasetProvider:
       if count < self.min_tf:
         break
 
-    ts = [t for i, t in self.int2token.items()]
-    print('most frequent tokens:', ' '.join(ts[:15]))
     print('vocabulary size:', len(self.token2int))
 
   def train_to_int_seq(self):
