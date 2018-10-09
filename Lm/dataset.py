@@ -47,17 +47,18 @@ class DatasetProvider:
     self.make_alphabet()
 
     if not os.path.isfile(XFILE):
+      # make training data if it's not there
       self.train_to_int_seq()
       self.make_and_save_train_data()
 
   def memory_footprint(self):
     """Display memory footprint of data members"""
 
-    print('txt_as_ints footprint:',
+    print('txt_as_ints memory footprint:',
       hurry.filesize.size(sys.getsizeof(self.txt_as_ints)))
-    print('token2int footprint:',
+    print('token2int memory footprint:',
       hurry.filesize.size(sys.getsizeof(self.token2int)))
-    print('int2token footprint',
+    print('int2token memory footprint',
       hurry.filesize.size(sys.getsizeof(self.int2token)))
 
   def read_train_text(self, use_tokenizer=False):
@@ -66,14 +67,12 @@ class DatasetProvider:
     # open(...).read() fails on large files
     # assume entire file is one line for now
     text = open(self.path).readline().lower()
-    print('done reading text...')
     if use_tokenizer:
       tokenized = nltk.word_tokenize(text)
       print('done tokenizing...')
       return tokenized
     else:
       tokenized = text.split()
-      print('done tokenizing...')
       return tokenized
 
   def make_alphabet(self):
@@ -95,7 +94,7 @@ class DatasetProvider:
       if count < self.min_tf:
         break
 
-    print('vocabulary size:', len(self.token2int))
+    print('alphabet size:', len(self.token2int))
 
   def train_to_int_seq(self):
     """Convert training corpus to a list of integers"""
