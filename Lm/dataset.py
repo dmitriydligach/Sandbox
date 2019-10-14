@@ -64,6 +64,8 @@ class DatasetProvider:
   def read_train_text(self, use_tokenizer=False):
     """Obtain corpus as list. Split on spaces by default"""
 
+    # TODO: this method now has a huge memory footprint!
+
     # open(...).read() fails on large files
     # assume entire file is one line for now
     text = open(self.path).readline().lower()
