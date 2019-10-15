@@ -132,7 +132,8 @@ for _ in trange(epochs, desc="Epoch"):
     # Clear out the gradients (by default they accumulate)
     optimizer.zero_grad()
     # Forward pass
-    loss = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+    outputs = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+    loss = outputs[0]
     train_loss_set.append(loss.item())
     # Backward pass
     loss.backward()
