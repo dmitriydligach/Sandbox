@@ -3,6 +3,7 @@
 import torch
 from transformers import BertTokenizer, BertConfig, AdamW
 from transformers import BertForSequenceClassification
+from transformers import WarmupLinearSchedule
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
@@ -18,11 +19,19 @@ logging.getLogger("transformers.tokenization_utils").setLevel(logging.ERROR)
 data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
 data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
 
-# hyper-parameters
+# settings
+gpu_num = 0
 max_files = None
 max_len = 512
 batch_size = 8
 epochs = 2
+
+# scheduler
+lr = 1e-3
+max_grad_norm = 1.0
+num_total_steps = 1000
+num_warmup_steps = 100
+warmup_proportion = float(num_warmup_steps) / float(num_total_steps)  # 0.1
 
 def load_data():
   """Rotten tomatoes"""
@@ -53,8 +62,7 @@ if __name__ == "__main__":
   os.system('clear')
 
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  n_gpu = torch.cuda.device_count()
-  torch.cuda.get_device_name(0)
+  print('using gpu:', torch.cuda.get_device_name(gpu_num))
 
   sentences, labels = load_data()
   print('loaded %d examples and %d labels...' % (len(sentences), len(labels)))
@@ -108,7 +116,8 @@ if __name__ == "__main__":
 
   # this variable contains all of the hyperparemeter information our training loop needs
   optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5)
-
+  scheduler = WarmupLinearSchedule(optimizer, warmup_steps=num_warmup_steps, t_total=num_total_steps)
+  
   # store our loss and accuracy for plotting
   train_loss_set = []
 
@@ -142,8 +151,10 @@ if __name__ == "__main__":
       loss.backward()
           
       # update parameters and take a step using the computed gradient
+      torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
       optimizer.step()
-
+      scheduler.step()
+      
       # update tracking variables
       tr_loss += loss.item()
       nb_tr_examples += b_input_ids.size(0)
