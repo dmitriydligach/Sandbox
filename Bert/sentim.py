@@ -19,10 +19,10 @@ data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
 data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
 
 # hyper-parameters
-max_files = all
+max_files = None
 max_len = 512
 batch_size = 8
-epochs = 4
+epochs = 2
 
 def load_data():
   """Rotten tomatoes"""
@@ -113,7 +113,7 @@ if __name__ == "__main__":
   train_loss_set = []
 
   # training loop
-  for _ in trange(epochs, desc="Epoch"):
+  for _ in trange(epochs, desc="epoch"):
 
     # Set our model to training mode (as opposed to evaluation mode)
     model.train()
@@ -181,4 +181,4 @@ if __name__ == "__main__":
       eval_accuracy += tmp_eval_accuracy
       nb_eval_steps += 1
 
-    print("validation Accuracy: {}\n".format(eval_accuracy/nb_eval_steps))
+    print("validation accuracy: {}\n".format(eval_accuracy/nb_eval_steps))
