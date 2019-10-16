@@ -13,10 +13,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 
-data_pos = '/Users/Dima/Loyola/Data/Imdb/train/pos/*.txt'
-data_neg = '/Users/Dima/Loyola/Data/Imdb/train/neg/*.txt'
+data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
+data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
 
-max_files = 100
+max_files = None
 max_len = 512
 
 import logging
@@ -79,7 +79,7 @@ validation_labels = torch.tensor(validation_labels)
 train_masks = torch.tensor(train_masks)
 validation_masks = torch.tensor(validation_masks)
 
-batch_size = 32
+batch_size = 8
 
 # create iterators for our data
 train_data = TensorDataset(train_inputs, train_masks, train_labels)
@@ -132,7 +132,8 @@ for _ in trange(epochs, desc="Epoch"):
     # Clear out the gradients (by default they accumulate)
     optimizer.zero_grad()
     # Forward pass
-    loss = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+    outputs = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+    loss = outputs[0]
     train_loss_set.append(loss.item())
     # Backward pass
     loss.backward()
@@ -164,7 +165,10 @@ for _ in trange(epochs, desc="Epoch"):
     # Telling the model not to compute or store gradients, saving memory and speeding up validation
     with torch.no_grad():
       # Forward pass, calculate logit predictions
-      logits = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
+      outputs = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
+      # loss, logits = outputs[:2]
+      # print('outputs len:', len(outputs)) # outputs 1
+      logits = outputs[0]
 
     # Move logits and labels to CPU
     logits = logits.detach().cpu().numpy()
