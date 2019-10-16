@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 
 import torch
+from transformers import BertTokenizer, BertConfig, AdamW
+from transformers import BertForSequenceClassification
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
-from transformers import BertTokenizer, BertConfig, AdamW
-from transformers import BertForSequenceClassification
 from tqdm import tqdm, trange
-import pandas as pd
-import io
 import numpy as np
-import matplotlib.pyplot as plt
-import glob
-import os
+import glob, os, logging
+
+logging.getLogger("transformers.configuration_utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
+logging.getLogger("transformers.tokenization_utils").setLevel(logging.ERROR)
 
 # imdb training data (ignoring test for now)
 data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
 data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
 
 # hyper-parameters
-max_files = 1000
+max_files = all
 max_len = 512
 batch_size = 8
 epochs = 4
