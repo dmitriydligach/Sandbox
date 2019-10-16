@@ -12,15 +12,17 @@ import io
 import numpy as np
 import matplotlib.pyplot as plt
 import glob
+import os
 
+# imdb training data (ignoring test for now)
 data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
 data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
 
-max_files = None
+# hyper-parameters
+max_files = 1000
 max_len = 512
-
-import logging
-logging.basicConfig(level=logging.INFO)
+batch_size = 8
+epochs = 4
 
 def load_data():
   """Rotten tomatoes"""
@@ -45,138 +47,138 @@ def flat_accuracy(preds, labels):
 
   return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-n_gpu = torch.cuda.device_count()
-torch.cuda.get_device_name(0)
+if __name__ == "__main__":
 
-sentences, labels = load_data()
-print('loaded %d examples and %d labels...' % (len(sentences), len(labels)))
+  # deal with warnings for now
+  os.system('clear')
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-tokenized_texts = [tokenizer.tokenize(sent) for sent in sentences]
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+  n_gpu = torch.cuda.device_count()
+  torch.cuda.get_device_name(0)
 
-input_ids = [tokenizer.convert_tokens_to_ids(x) for x in tokenized_texts]
-input_ids = pad_sequences(input_ids, maxlen=max_len, dtype="long", truncating="post", padding="post")
+  sentences, labels = load_data()
+  print('loaded %d examples and %d labels...' % (len(sentences), len(labels)))
 
-# Create attention masks
-attention_masks = []
+  # tokenize and convert to ints
+  tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
+  tokenized_texts = [tokenizer.tokenize(sent) for sent in sentences]
+  input_ids = [tokenizer.convert_tokens_to_ids(x) for x in tokenized_texts]
+  input_ids = pad_sequences(input_ids, maxlen=max_len, dtype="long", truncating="post", padding="post")
 
-# Create a mask of 1s for each token followed by 0s for padding
-for seq in input_ids:
-  seq_mask = [float(i > 0) for i in seq]
-  attention_masks.append(seq_mask)
+  # create attention masks
+  attention_masks = []
+  for seq in input_ids:
+    # use 1s for tokens and 0s for padding
+    seq_mask = [float(i > 0) for i in seq]
+    attention_masks.append(seq_mask)
 
+  # make validation set
+  train_inputs, validation_inputs, train_labels, validation_labels = \
+    train_test_split(input_ids, labels, test_size=0.1, random_state=0)
+  train_masks, validation_masks, _, _ = \
+    train_test_split(attention_masks, input_ids, test_size=0.1, random_state=0)
 
-train_inputs, validation_inputs, train_labels, validation_labels = \
-  train_test_split(input_ids, labels, test_size=0.1)
-train_masks, validation_masks, _, _ = \
-  train_test_split(attention_masks, input_ids, test_size=0.1)
+  # convert everything into torch tensors
+  train_inputs = torch.tensor(train_inputs)
+  validation_inputs = torch.tensor(validation_inputs)
+  train_labels = torch.tensor(train_labels)
+  validation_labels = torch.tensor(validation_labels)
+  train_masks = torch.tensor(train_masks)
+  validation_masks = torch.tensor(validation_masks)
 
-train_inputs = torch.tensor(train_inputs)
-validation_inputs = torch.tensor(validation_inputs)
-train_labels = torch.tensor(train_labels)
-validation_labels = torch.tensor(validation_labels)
-train_masks = torch.tensor(train_masks)
-validation_masks = torch.tensor(validation_masks)
+  # create iterators for our data
+  train_data = TensorDataset(train_inputs, train_masks, train_labels)
+  train_sampler = RandomSampler(train_data)
+  train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
+  validation_data = TensorDataset(validation_inputs, validation_masks, validation_labels)
+  validation_sampler = SequentialSampler(validation_data)
+  validation_dataloader = DataLoader(validation_data, sampler=validation_sampler, batch_size=batch_size)
 
-batch_size = 8
+  # load pretrained bert model with a single linear classification layer on top
+  model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
+  model.cuda()
 
-# create iterators for our data
-train_data = TensorDataset(train_inputs, train_masks, train_labels)
-train_sampler = RandomSampler(train_data)
-train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=batch_size)
-validation_data = TensorDataset(validation_inputs, validation_masks, validation_labels)
-validation_sampler = SequentialSampler(validation_data)
-validation_dataloader = DataLoader(validation_data, sampler=validation_sampler, batch_size=batch_size)
-
-# load pretrained BERT model with a single linear classification layer on top
-model = BertForSequenceClassification.from_pretrained("bert-base-uncased", num_labels=2)
-model.cuda()
-
-param_optimizer = list(model.named_parameters())
-no_decay = ['bias', 'gamma', 'beta']
-optimizer_grouped_parameters = [
+  param_optimizer = list(model.named_parameters())
+  no_decay = ['bias', 'gamma', 'beta']
+  optimizer_grouped_parameters = [
     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)],
      'weight_decay_rate': 0.01},
     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)],
-     'weight_decay_rate': 0.0}
-]
+     'weight_decay_rate': 0.0}]
 
-# This variable contains all of the hyperparemeter information our training loop needs
-optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5)
+  # this variable contains all of the hyperparemeter information our training loop needs
+  optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5)
 
-# Store our loss and accuracy for plotting
-train_loss_set = []
+  # store our loss and accuracy for plotting
+  train_loss_set = []
 
-# Number of training epochs (authors recommend between 2 and 4)
-epochs = 4
+  # training loop
+  for _ in trange(epochs, desc="Epoch"):
 
-# trange is a tqdm wrapper around the normal python range
-for _ in trange(epochs, desc="Epoch"):
+    # Set our model to training mode (as opposed to evaluation mode)
+    model.train()
 
-  # Training
+    # Tracking variables
+    tr_loss = 0
+    nb_tr_examples, nb_tr_steps = 0, 0
 
-  # Set our model to training mode (as opposed to evaluation mode)
-  model.train()
+    # train for one epoch
+    for step, batch in enumerate(train_dataloader):
+    
+      # add batch to GPU
+      batch = tuple(t.to(device) for t in batch)
+    
+      # unpack the inputs from our dataloader
+      b_input_ids, b_input_mask, b_labels = batch
+    
+      # clear out the gradients (by default they accumulate)
+      optimizer.zero_grad()
+    
+      # forward pass
+      loss, logits = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
+      train_loss_set.append(loss.item())
+          
+      # backward pass
+      loss.backward()
+          
+      # update parameters and take a step using the computed gradient
+      optimizer.step()
 
-  # Tracking variables
-  tr_loss = 0
-  nb_tr_examples, nb_tr_steps = 0, 0
+      # update tracking variables
+      tr_loss += loss.item()
+      nb_tr_examples += b_input_ids.size(0)
+      nb_tr_steps += 1
 
-  # Train the data for one epoch
-  for step, batch in enumerate(train_dataloader):
-    # Add batch to GPU
-    batch = tuple(t.to(device) for t in batch)
-    # Unpack the inputs from our dataloader
-    b_input_ids, b_input_mask, b_labels = batch
-    # Clear out the gradients (by default they accumulate)
-    optimizer.zero_grad()
-    # Forward pass
-    outputs = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
-    loss = outputs[0]
-    train_loss_set.append(loss.item())
-    # Backward pass
-    loss.backward()
-    # Update parameters and take a step using the computed gradient
-    optimizer.step()
+    print("train loss: {}".format(tr_loss/nb_tr_steps))
 
-    # Update tracking variables
-    tr_loss += loss.item()
-    nb_tr_examples += b_input_ids.size(0)
-    nb_tr_steps += 1
+    # put model in evaluation mode to evaluate loss on the validation set
+    model.eval()
 
-  print("Train loss: {}".format(tr_loss/nb_tr_steps))
+    # tracking variables
+    eval_loss, eval_accuracy = 0, 0
+    nb_eval_steps, nb_eval_examples = 0, 0
 
-  # Validation
+    # evaluate data for one epoch
+    for batch in validation_dataloader:
+      
+      # add batch to GPU
+      batch = tuple(t.to(device) for t in batch)
+      
+      # unpack the inputs from our dataloader
+      b_input_ids, b_input_mask, b_labels = batch
+      
+      # don't compute or store gradients
+      with torch.no_grad():
+        # forward pass; only logits returned since labels not provided
+        [logits] = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
 
-  # Put model in evaluation mode to evaluate loss on the validation set
-  model.eval()
+      # move logits and labels to CPU
+      logits = logits.detach().cpu().numpy()
+      label_ids = b_labels.to('cpu').numpy()
 
-  # Tracking variables
-  eval_loss, eval_accuracy = 0, 0
-  nb_eval_steps, nb_eval_examples = 0, 0
+      tmp_eval_accuracy = flat_accuracy(logits, label_ids)
 
-  # Evaluate data for one epoch
-  for batch in validation_dataloader:
-    # Add batch to GPU
-    batch = tuple(t.to(device) for t in batch)
-    # Unpack the inputs from our dataloader
-    b_input_ids, b_input_mask, b_labels = batch
-    # Telling the model not to compute or store gradients, saving memory and speeding up validation
-    with torch.no_grad():
-      # Forward pass, calculate logit predictions
-      outputs = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask)
-      # loss, logits = outputs[:2]
-      # print('outputs len:', len(outputs)) # outputs 1
-      logits = outputs[0]
+      eval_accuracy += tmp_eval_accuracy
+      nb_eval_steps += 1
 
-    # Move logits and labels to CPU
-    logits = logits.detach().cpu().numpy()
-    label_ids = b_labels.to('cpu').numpy()
-
-    tmp_eval_accuracy = flat_accuracy(logits, label_ids)
-
-    eval_accuracy += tmp_eval_accuracy
-    nb_eval_steps += 1
-
-  print("Validation Accuracy: {}".format(eval_accuracy/nb_eval_steps))
+    print("validation Accuracy: {}\n".format(eval_accuracy/nb_eval_steps))
