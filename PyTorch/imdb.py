@@ -82,11 +82,11 @@ def stream_data(batch_size):
   for start_row in range(0, x_train.shape[0], batch_size):
 
     batch_x_train = torch.tensor(x_train[start_row:start_row + batch_size, :].toarray())
-    batch_x_test = torch.tensor(x_test[start_row:start_row + batch_size, :].toarray())
+    # batch_x_test = torch.tensor(x_test[start_row:start_row + batch_size, :].toarray())
     batch_y_train = torch.tensor(y_train[start_row:start_row + batch_size])
-    batch_y_test = torch.tensor(y_test[start_row:start_row + batch_size])
+    # batch_y_test = torch.tensor(y_test[start_row:start_row + batch_size])
 
-    yield batch_x_train, batch_x_test, batch_y_train, batch_y_test
+    yield batch_x_train, torch.tensor(x_test.toarray()), batch_y_train, y_test
 
 class Perceptron(nn.Module):
   """A Perceptron is one Linear layer"""
@@ -107,7 +107,7 @@ if __name__ == "__main__":
   lr = 0.01
 
   batch_size = 100
-  n_epochs = 5
+  n_epochs = 25
   n_batches = 5
 
   torch.manual_seed(10)
@@ -137,7 +137,7 @@ if __name__ == "__main__":
 
       y_train = y_train.float()
       loss = bce_loss(y_pred, y_train)
-      print(loss)
+      print('loss:', loss.item())
 
       loss.backward()
 
@@ -152,5 +152,7 @@ if __name__ == "__main__":
       last = loss_value
 
       x_test = x_test.float()
-      print('dims:', x_test.shape)
-      # y_test_pred = perceptron(x_test).squeeze()
+      y_test_pred = perceptron(x_test).squeeze()
+      predictions = y_test_pred > 0.5
+      acc = accuracy_score(y_test, predictions.tolist())
+      print('accuracy:', acc)
