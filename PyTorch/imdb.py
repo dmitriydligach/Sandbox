@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
-import torch, numpy
-import glob, os
+import torch, glob, os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
+
+import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
 data_pos = 'Imdb/train/pos/*.txt'
 data_neg = 'Imdb/train/neg/*.txt'
@@ -17,6 +21,7 @@ data_neg = os.path.join(base, data_neg)
 # settings
 gpu_num = 0
 max_files = 500
+max_features = 5000
 batch_size = 8
 epochs = 2
 
@@ -35,8 +40,8 @@ def load_data():
 
   return sentences, labels
 
-def logistic_regression():
-  """Train a logistic regression classifier"""
+def make_vectors():
+  """Vectorize input sentences"""
 
   sentences, labels = load_data()
 
@@ -55,6 +60,13 @@ def logistic_regression():
   x_train = vectorizer.fit_transform(x_train)
   x_test = vectorizer.transform(x_test)
 
+  return x_train, x_test, y_train, y_test
+
+def logistic_regression():
+  """Train a logistic regression classifier"""
+
+  x_train, x_test, y_train, y_test = make_vectors()
+
   classifier = LogisticRegression(C=1, solver='liblinear')
   model = classifier.fit(x_train, y_train)
   predictions = classifier.predict(x_test)
@@ -62,6 +74,83 @@ def logistic_regression():
   acc = accuracy_score(y_test, predictions)
   print('accuracy (test) = {}'.format(acc))
 
+def stream_data(batch_size):
+  """Data generator"""
+
+  x_train, x_test, y_train, y_test = make_vectors()
+
+  for start_row in range(0, x_train.shape[0], batch_size):
+
+    batch_x_train = torch.tensor(x_train[start_row:start_row + batch_size, :].toarray())
+    batch_x_test = torch.tensor(x_test[start_row:start_row + batch_size, :].toarray())
+    batch_y_train = torch.tensor(y_train[start_row:start_row + batch_size])
+    batch_y_test = torch.tensor(y_test[start_row:start_row + batch_size])
+
+    yield batch_x_train, batch_x_test, batch_y_train, batch_y_test
+
+class Perceptron(nn.Module):
+  """A Perceptron is one Linear layer"""
+
+  def __init__(self, input_dim):
+      """Args: input_dim (int): size of the input features"""
+
+      super(Perceptron, self).__init__()
+      self.fc1 = nn.Linear(input_dim, 1)
+
+  def forward(self, x_in):
+    """x_in.shape should be (batch, input_dim)"""
+
+    return torch.sigmoid(self.fc1(x_in))
+
 if __name__ == "__main__":
 
-  logistic_regression()
+  lr = 0.01
+
+  batch_size = 100
+  n_epochs = 5
+  n_batches = 5
+
+  torch.manual_seed(10)
+  torch.cuda.manual_seed_all(10)
+  np.random.seed(10)
+
+  perceptron = Perceptron(input_dim=max_features)
+  optimizer = optim.Adam(params=perceptron.parameters(), lr=lr)
+  bce_loss = nn.BCELoss()
+
+  losses = []
+
+  change = 1.0
+  last = 10.0
+  epsilon = 1e-3
+  epoch = 0
+
+  # training loop
+  for epoch in range(n_epochs):
+
+    for x_train, x_test, y_train, y_test in stream_data(batch_size):
+
+      optimizer.zero_grad()
+
+      x_train = x_train.float()
+      y_pred = perceptron(x_train).squeeze()
+
+      y_train = y_train.float()
+      loss = bce_loss(y_pred, y_train)
+      print(loss)
+
+      loss.backward()
+
+      optimizer.step()
+
+      loss_value = loss.item()
+
+      losses.append(loss_value)
+
+      change = abs(last - loss_value)
+
+      last = loss_value
+
+      x_test = x_test.float()
+      print('dims:', x_test.shape)
+      # y_test_pred = perceptron(x_test).squeeze()
