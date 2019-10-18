@@ -108,10 +108,6 @@ class Perceptron(nn.Module):
 def train():
   """Training loop"""
 
-  torch.manual_seed(10)
-  torch.cuda.manual_seed_all(10)
-  np.random.seed(10)
-
   perceptron = Perceptron(input_dim=max_features)
   optimizer = optim.Adam(params=perceptron.parameters(), lr=lr)
   bce_loss = nn.BCELoss()
