@@ -22,14 +22,11 @@ data_neg = os.path.join(base, data_neg)
 gpu_num = 0
 max_files = 500
 max_features = 5000
-batch_size = 8
-epochs = 5
 
+# hyper-parameters
 lr = 0.01
-
 batch_size = 100
-n_epochs = 25
-n_batches = 5
+epochs = 10
 
 def load_data():
   """Rotten tomatoes"""
@@ -110,7 +107,8 @@ class Perceptron(nn.Module):
 
     return torch.sigmoid(self.fc1(x))
 
-if __name__ == "__main__":
+def train():
+  """Training loop"""
 
   torch.manual_seed(10)
   torch.cuda.manual_seed_all(10)
@@ -123,18 +121,22 @@ if __name__ == "__main__":
   # do several passess over training examples
   for epoch in range(epochs):
 
-    # do a pass over training examples
+    # do one pass over training examples
     for x_train, x_test, y_train, y_test in stream_data(batch_size):
       optimizer.zero_grad()
 
-      y_pred = perceptron(x_train)#.squeeze()
+      y_pred = perceptron(x_train).squeeze()
       loss = bce_loss(y_pred, y_train)
 
       loss.backward()
       optimizer.step()
 
-      y_test_pred = perceptron(x_test).squeeze()
-      predictions = y_test_pred > 0.5
-      acc = accuracy_score(y_test, predictions.tolist())
+    predictions = perceptron(x_test).squeeze()
+    predictions = predictions > 0.5
+    acc = accuracy_score(y_test, predictions.tolist())
 
-      print('ep: {}, loss: {}, acc: {}'.format(epoch, loss.item(), acc))
+    print('ep: {}, loss: {}, acc: {}'.format(epoch+1, loss.item(), acc))
+
+if __name__ == "__main__":
+
+  train()
