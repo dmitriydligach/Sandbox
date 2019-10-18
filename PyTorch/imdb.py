@@ -8,7 +8,6 @@ from sklearn.metrics import accuracy_score
 
 import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
 
 data_pos = 'Imdb/train/pos/*.txt'
@@ -19,8 +18,7 @@ data_pos = os.path.join(base, data_pos)
 data_neg = os.path.join(base, data_neg)
 
 # settings
-gpu_num = 0
-max_files = 500
+max_files = 1000
 max_features = 5000
 
 # hyper-parameters
@@ -57,7 +55,7 @@ def make_vectors():
 
   vectorizer = TfidfVectorizer(
     stop_words='english',
-    max_features=5000,
+    max_features=max_features,
     ngram_range=(1, 1))
 
   x_train = vectorizer.fit_transform(x_train)
@@ -125,8 +123,8 @@ def train():
     for x_train, x_test, y_train, y_test in stream_data(batch_size):
       optimizer.zero_grad()
 
-      y_pred = perceptron(x_train).squeeze()
-      loss = bce_loss(y_pred, y_train)
+      y_predicted = perceptron(x_train).squeeze()
+      loss = bce_loss(y_predicted, y_train)
 
       loss.backward()
       optimizer.step()
