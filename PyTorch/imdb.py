@@ -23,7 +23,13 @@ gpu_num = 0
 max_files = 500
 max_features = 5000
 batch_size = 8
-epochs = 2
+epochs = 5
+
+lr = 0.01
+
+batch_size = 100
+n_epochs = 25
+n_batches = 5
 
 def load_data():
   """Rotten tomatoes"""
@@ -60,6 +66,7 @@ def make_vectors():
   x_train = vectorizer.fit_transform(x_train)
   x_test = vectorizer.transform(x_test)
 
+  # the output of transform() is a sparse matrix!
   return x_train, x_test, y_train, y_test
 
 def logistic_regression():
@@ -75,18 +82,19 @@ def logistic_regression():
   print('accuracy (test) = {}'.format(acc))
 
 def stream_data(batch_size):
-  """Data generator"""
+  """Only train data. Test stays the same"""
 
   x_train, x_test, y_train, y_test = make_vectors()
+  x_test = torch.tensor(x_test.toarray()).float()
 
-  for start_row in range(0, x_train.shape[0], batch_size):
+  for row in range(0, x_train.shape[0], batch_size):
+    batch_x_train = x_train[row:row+batch_size, :]
+    batch_y_train = y_train[row:row+batch_size]
 
-    batch_x_train = torch.tensor(x_train[start_row:start_row + batch_size, :].toarray())
-    # batch_x_test = torch.tensor(x_test[start_row:start_row + batch_size, :].toarray())
-    batch_y_train = torch.tensor(y_train[start_row:start_row + batch_size])
-    # batch_y_test = torch.tensor(y_test[start_row:start_row + batch_size])
+    batch_x_train = torch.tensor(batch_x_train.toarray()).float()
+    batch_y_train = torch.tensor(batch_y_train).float()
 
-    yield batch_x_train, torch.tensor(x_test.toarray()), batch_y_train, y_test
+    yield batch_x_train, x_test, batch_y_train, y_test
 
 class Perceptron(nn.Module):
   """A Perceptron is one Linear layer"""
@@ -97,18 +105,12 @@ class Perceptron(nn.Module):
       super(Perceptron, self).__init__()
       self.fc1 = nn.Linear(input_dim, 1)
 
-  def forward(self, x_in):
-    """x_in.shape should be (batch, input_dim)"""
+  def forward(self, x):
+    """x.shape should be (batch, input_dim)"""
 
-    return torch.sigmoid(self.fc1(x_in))
+    return torch.sigmoid(self.fc1(x))
 
 if __name__ == "__main__":
-
-  lr = 0.01
-
-  batch_size = 100
-  n_epochs = 25
-  n_batches = 5
 
   torch.manual_seed(10)
   torch.cuda.manual_seed_all(10)
@@ -118,41 +120,21 @@ if __name__ == "__main__":
   optimizer = optim.Adam(params=perceptron.parameters(), lr=lr)
   bce_loss = nn.BCELoss()
 
-  losses = []
+  # do several passess over training examples
+  for epoch in range(epochs):
 
-  change = 1.0
-  last = 10.0
-  epsilon = 1e-3
-  epoch = 0
-
-  # training loop
-  for epoch in range(n_epochs):
-
+    # do a pass over training examples
     for x_train, x_test, y_train, y_test in stream_data(batch_size):
-
       optimizer.zero_grad()
 
-      x_train = x_train.float()
-      y_pred = perceptron(x_train).squeeze()
-
-      y_train = y_train.float()
+      y_pred = perceptron(x_train)#.squeeze()
       loss = bce_loss(y_pred, y_train)
-      print('loss:', loss.item())
 
       loss.backward()
-
       optimizer.step()
 
-      loss_value = loss.item()
-
-      losses.append(loss_value)
-
-      change = abs(last - loss_value)
-
-      last = loss_value
-
-      x_test = x_test.float()
       y_test_pred = perceptron(x_test).squeeze()
       predictions = y_test_pred > 0.5
       acc = accuracy_score(y_test, predictions.tolist())
-      print('accuracy:', acc)
+
+      print('ep: {}, loss: {}, acc: {}'.format(epoch, loss.item(), acc))
