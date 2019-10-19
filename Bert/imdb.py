@@ -16,8 +16,12 @@ logging.getLogger("transformers.modeling_utils").setLevel(logging.ERROR)
 logging.getLogger("transformers.tokenization_utils").setLevel(logging.ERROR)
 
 # imdb training data (ignoring test for now)
-data_pos = '/home/dima/Data/Imdb/train/pos/*.txt'
-data_neg = '/home/dima/Data/Imdb/train/neg/*.txt'
+data_pos = 'Imdb/train/pos/*.txt'
+data_neg = 'Imdb/train/neg/*.txt'
+
+base = os.environ['DATA_ROOT']
+data_pos = os.path.join(base, data_pos)
+data_neg = os.path.join(base, data_neg)
 
 # settings
 gpu_num = 0
@@ -56,7 +60,8 @@ def flat_accuracy(preds, labels):
 
   return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
-if __name__ == "__main__":
+def train():
+  """Fine-tune bert using IMDB data"""
 
   # deal with warnings for now
   os.system('clear')
@@ -117,12 +122,12 @@ if __name__ == "__main__":
   # this variable contains all of the hyperparemeter information our training loop needs
   optimizer = AdamW(optimizer_grouped_parameters, lr=2e-5)
   scheduler = WarmupLinearSchedule(optimizer, warmup_steps=num_warmup_steps, t_total=num_total_steps)
-  
+
   # store our loss and accuracy for plotting
   train_loss_set = []
 
   # training loop
-  for _ in trange(epochs, desc="epoch"):
+  for epoch in trange(epochs, desc="epoch"):
 
     # Set our model to training mode (as opposed to evaluation mode)
     model.train()
@@ -133,34 +138,34 @@ if __name__ == "__main__":
 
     # train for one epoch
     for step, batch in enumerate(train_dataloader):
-    
+
       # add batch to GPU
       batch = tuple(t.to(device) for t in batch)
-    
+
       # unpack the inputs from our dataloader
       b_input_ids, b_input_mask, b_labels = batch
-    
+
       # clear out the gradients (by default they accumulate)
       optimizer.zero_grad()
-    
+
       # forward pass
       loss, logits = model(b_input_ids, token_type_ids=None, attention_mask=b_input_mask, labels=b_labels)
       train_loss_set.append(loss.item())
-          
+
       # backward pass
       loss.backward()
-          
+
       # update parameters and take a step using the computed gradient
       torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
       optimizer.step()
       scheduler.step()
-      
+
       # update tracking variables
       tr_loss += loss.item()
       nb_tr_examples += b_input_ids.size(0)
       nb_tr_steps += 1
 
-    print("train loss: {}".format(tr_loss/nb_tr_steps))
+    print("epoch: {}, loss: {}".format(epoch, tr_loss/nb_tr_steps))
 
     # put model in evaluation mode to evaluate loss on the validation set
     model.eval()
@@ -171,13 +176,13 @@ if __name__ == "__main__":
 
     # evaluate data for one epoch
     for batch in validation_dataloader:
-      
+
       # add batch to GPU
       batch = tuple(t.to(device) for t in batch)
-      
+
       # unpack the inputs from our dataloader
       b_input_ids, b_input_mask, b_labels = batch
-      
+
       # don't compute or store gradients
       with torch.no_grad():
         # forward pass; only logits returned since labels not provided
@@ -193,3 +198,7 @@ if __name__ == "__main__":
       nb_eval_steps += 1
 
     print("validation accuracy: {}\n".format(eval_accuracy/nb_eval_steps))
+
+if __name__ == "__main__":
+
+  train()

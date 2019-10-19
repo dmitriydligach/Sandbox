@@ -46,7 +46,7 @@ def make_vectors():
 
   sentences, labels = load_data()
 
-  x_train, x_test, y_train, y_test = \
+  x_train, x_dev, y_train, y_dev = \
     train_test_split(
       sentences,
       labels,
@@ -59,28 +59,28 @@ def make_vectors():
     ngram_range=(1, 1))
 
   x_train = vectorizer.fit_transform(x_train)
-  x_test = vectorizer.transform(x_test)
+  x_dev = vectorizer.transform(x_dev)
 
   # the output of transform() is a sparse matrix!
-  return x_train, x_test, y_train, y_test
+  return x_train, x_dev, y_train, y_dev
 
 def logistic_regression():
   """Train a logistic regression classifier"""
 
-  x_train, x_test, y_train, y_test = make_vectors()
+  x_train, x_dev, y_train, y_dev = make_vectors()
 
   classifier = LogisticRegression(C=1, solver='liblinear')
   model = classifier.fit(x_train, y_train)
-  predictions = classifier.predict(x_test)
+  predictions = classifier.predict(x_dev)
 
-  acc = accuracy_score(y_test, predictions)
-  print('accuracy (test) = {}'.format(acc))
+  acc = accuracy_score(y_dev, predictions)
+  print('accuracy (dev) = {}'.format(acc))
 
 def stream_data(batch_size):
-  """Only train data. Test stays the same"""
+  """Only train data. Dev stays the same"""
 
-  x_train, x_test, y_train, y_test = make_vectors()
-  x_test = torch.tensor(x_test.toarray()).float()
+  x_train, x_dev, y_train, y_dev = make_vectors()
+  x_dev = torch.tensor(x_dev.toarray()).float()
 
   for row in range(0, x_train.shape[0], batch_size):
     batch_x_train = x_train[row:row+batch_size, :]
@@ -89,7 +89,7 @@ def stream_data(batch_size):
     batch_x_train = torch.tensor(batch_x_train.toarray()).float()
     batch_y_train = torch.tensor(batch_y_train).float()
 
-    yield batch_x_train, x_test, batch_y_train, y_test
+    yield batch_x_train, x_dev, batch_y_train, y_dev
 
 class Perceptron(nn.Module):
   """A Perceptron is one Linear layer"""
@@ -116,7 +116,7 @@ def train():
   for epoch in range(epochs):
 
     # do one pass over training examples
-    for x_train, x_test, y_train, y_test in stream_data(batch_size):
+    for x_train, x_dev, y_train, y_dev in stream_data(batch_size):
       optimizer.zero_grad()
 
       y_predicted = perceptron(x_train).squeeze()
@@ -125,9 +125,9 @@ def train():
       loss.backward()
       optimizer.step()
 
-    predictions = perceptron(x_test).squeeze()
+    predictions = perceptron(x_dev).squeeze()
     predictions = predictions > 0.5
-    acc = accuracy_score(y_test, predictions.tolist())
+    acc = accuracy_score(y_dev, predictions.tolist())
 
     print('ep: {}, loss: {}, acc: {}'.format(epoch+1, loss.item(), acc))
 
