@@ -105,7 +105,7 @@ class Perceptron(nn.Module):
 
     return torch.sigmoid(self.fc1(x))
 
-def train():
+def train_manual_batches():
   """Training loop"""
 
   perceptron = Perceptron(input_dim=max_features)
@@ -131,6 +131,32 @@ def train():
 
     print('ep: {}, loss: {}, acc: {}'.format(epoch+1, loss.item(), acc))
 
+def train_no_batches():
+  """Training loop"""
+
+  perceptron = Perceptron(input_dim=max_features)
+  optimizer = optim.Adam(params=perceptron.parameters(), lr=lr)
+  bce_loss = nn.BCELoss()
+
+  x_train, x_dev, y_train, y_dev = make_vectors()
+  x_train = torch.tensor(x_train.toarray()).float()
+  y_train = torch.tensor(y_train).float()
+  x_dev = torch.tensor(x_dev.toarray()).float()
+  y_dev = torch.tensor(y_dev).float()
+
+  for epoch in range(epochs):
+    optimizer.zero_grad()
+    y_hat = perceptron(x_train).squeeze()
+    loss = bce_loss(y_hat, y_train)
+    loss.backward()
+    optimizer.step()
+
+    predictions = perceptron(x_dev).squeeze()
+    predictions = predictions > 0.5
+    acc = accuracy_score(y_dev, predictions.tolist())
+
+    print('ep: {}, loss: {}, acc: {}'.format(epoch+1, loss.item(), acc))
+
 if __name__ == "__main__":
 
-  train()
+  train_no_batches()
