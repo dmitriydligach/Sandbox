@@ -27,28 +27,33 @@ lr = 0.01
 batch_size = 100
 epochs = 10
 
-def load_data():
-  """Rotten tomatoes"""
-
-  labels = []
-  sentences = []
-
-  for file in glob.glob(data_pos)[:max_files]:
-    labels.append(1)
-    sentences.append(open(file).read().rstrip())
-  for file in glob.glob(data_neg)[:max_files]:
-    labels.append(0)
-    sentences.append(open(file).read())
-
-  return sentences, labels
-
 class ImdbDataset(Dataset):
   """Used to fetch individual vectorized examples"""
 
   def __init__(self):
     """Constructor"""
 
-    sentences, labels = load_data()
+    self.vectorize()
+
+  def load_data(self):
+    """Rotten tomatoes"""
+
+    labels = []
+    sentences = []
+
+    for file in glob.glob(data_pos)[:max_files]:
+      labels.append(1)
+      sentences.append(open(file).read().rstrip())
+    for file in glob.glob(data_neg)[:max_files]:
+      labels.append(0)
+      sentences.append(open(file).read())
+
+    return sentences, labels
+
+  def vectorize(self):
+    """Vectorize IMDB sentences"""
+
+    sentences, labels = self.load_data()
 
     x_train, x_dev, y_train, y_dev = \
       train_test_split(
@@ -105,25 +110,16 @@ def train():
   bce_loss = nn.BCELoss()
 
   dataset = ImdbDataset()
-
   x_dev, y_dev = dataset.get_dev()
+  batch_generator = DataLoader(dataset=dataset, batch_size=batch_size)
 
-  dataloader = DataLoader(
-    dataset=dataset,
-    batch_size=batch_size,
-    shuffle=True,
-    drop_last=True)
-
-  # do several passess over training examples
   for epoch in range(epochs):
 
-    # do one pass over training examples
-    for x_train, y_train in dataloader:
+    for x_train, y_train in batch_generator:
+
       optimizer.zero_grad()
-
-      y_predicted = perceptron(x_train).squeeze()
-      loss = bce_loss(y_predicted, y_train)
-
+      y_hat = perceptron(x_train).squeeze()
+      loss = bce_loss(y_hat, y_train)
       loss.backward()
       optimizer.step()
 

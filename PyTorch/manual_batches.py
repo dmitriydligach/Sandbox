@@ -131,7 +131,7 @@ def train_manual_batches():
 
     print('ep: {}, loss: {}, acc: {}'.format(epoch+1, loss.item(), acc))
 
-def train_no_batches():
+def train_all_one_batch():
   """Training loop"""
 
   perceptron = Perceptron(input_dim=max_features)
@@ -159,4 +159,4 @@ def train_no_batches():
 
 if __name__ == "__main__":
 
-  train_no_batches()
+  train_manual_batches()
