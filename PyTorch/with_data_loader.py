@@ -81,6 +81,8 @@ class ImdbDataset(Dataset):
     return self.x_dev, self.y_dev
 
   def __len__(self):
+    """Should return the size of the datataset"""
+
     return len(self.x_train)
 
   def __getitem__(self, index):
@@ -110,6 +112,9 @@ def train():
   bce_loss = nn.BCELoss()
 
   dataset = ImdbDataset()
+  # alternatively can use TensorDataset(x_train, y_train)
+  # and then pass it to DataLoader(...) to make batches
+
   x_dev, y_dev = dataset.get_dev()
   batch_generator = DataLoader(dataset=dataset, batch_size=batch_size)
 
