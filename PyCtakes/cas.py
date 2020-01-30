@@ -7,7 +7,7 @@ if __name__ == "__main__":
   ts_file = open('TypeSystem.xml', 'rb')
   type_system = load_typesystem(ts_file)
 
-  xmi_file = open('patientX_doc3_NOTE.txt.xmi', 'rb')
+  xmi_file = open('XmiSingleView/patientX_doc3_NOTE.txt.xmi', 'rb')
   cas = load_cas_from_xmi(xmi_file, typesystem=type_system)
 
   for sentence in cas.select('org.apache.ctakes.typesystem.type.textspan.Sentence'):
