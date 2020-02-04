@@ -13,6 +13,6 @@ if __name__ == "__main__":
   for sentence in cas.select('org.apache.ctakes.typesystem.type.textspan.Sentence'):
     print('\nsentence:', sentence.get_covered_text())
 
-    # for token in cas.select_covered('org.apache.ctakes.typesystem.type.syntax.BaseToken', sentence):
-    for token in cas.select_covered('org.apache.ctakes.typesystem.type.syntax.WordToken', sentence):
+    for token in cas.select_covered('org.apache.ctakes.typesystem.type.syntax.BaseToken', sentence):
+    # for token in cas.select_covered('org.apache.ctakes.typesystem.type.syntax.WordToken', sentence):
       print('token:', token.get_covered_text())
