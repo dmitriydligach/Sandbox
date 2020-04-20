@@ -40,6 +40,7 @@ segment_inputs = tf.keras.Input(shape=(None,), name='segment_inputs', dtype='int
 
 # Load model and collect encodings
 bert = BERT.from_pretrained('bert-base-uncased')
+# bert = transformers.TFBertModel.from_pretrained("bert-base-cased")
 token_encodings = bert([token_inputs, mask_inputs, segment_inputs])[0]
 
 # Keep only [CLS] token encoding
