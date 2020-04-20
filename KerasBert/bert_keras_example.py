@@ -77,9 +77,9 @@ x = to_inputs(tokenizer, [
 y = np.array([1, 0])
 
 predictions = model.predict(x)
-print('logits:', predictions)
+print('\nlogits:\n', predictions)
 predictions = np.argmax(predictions, axis=1)
 print('predictions:', predictions)
 
-print('evaluate:')
+print('\nevaluate:')
 model.evaluate(x=x, y=y)
