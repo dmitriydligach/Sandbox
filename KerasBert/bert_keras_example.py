@@ -75,4 +75,11 @@ x = to_inputs(tokenizer, [
   "I like this.",
   "I do not like that!"])
 y = np.array([1, 0])
+
+predictions = model.predict(x)
+print('logits:', predictions)
+predictions = np.argmax(predictions, axis=1)
+print('predictions:', predictions)
+
+print('evaluate:')
 model.evaluate(x=x, y=y)
