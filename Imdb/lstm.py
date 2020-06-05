@@ -14,6 +14,8 @@ from torch.utils.data import RandomSampler, SequentialSampler
 import numpy as np
 import os, configparser, random
 
+from sklearn.metrics import accuracy_score
+
 import imdbdata, utils
 
 # deterministic determinism
@@ -108,7 +110,7 @@ def train(model, train_loader, val_loader, weights):
     print('epoch: %d, train loss: %.3f, val loss: %.3f, val f1: %.3f' % \
           (epoch, av_loss, val_loss, f1))
 
-def evaluate(model, data_loader, weights, suppress_output=True):
+def evaluate(model, data_loader, weights):
   """Evaluation routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -141,13 +143,8 @@ def evaluate(model, data_loader, weights, suppress_output=True):
     total_loss += loss.item()
     num_steps += 1
 
-  f1 = metrics.f1(all_labels,
-                  all_predictions,
-                  reldata.int2label,
-                  reldata.label2int,
-                  suppress_output)
-
-  return total_loss / num_steps, f1
+  accuracy = accuracy_score(all_labels, all_predictions)
+  return total_loss / num_steps, accuracy
 
 def main():
   """Fine-tune bert"""
@@ -160,7 +157,7 @@ def main():
   tr_texts, tr_labels = train_data.read()
   train_loader = make_data_loader(tr_texts, tr_labels, RandomSampler)
 
-  val_data = reldata.RelData(
+  val_data = imdbdata.ImdbData(
     os.path.join(base, cfg.get('data', 'dir_path')),
     partition='test',
     max_tokens=cfg.getint('data', 'max_tokens'),
@@ -174,7 +171,7 @@ def main():
   weights = len(tr_labels) / (2.0 * label_counts)
 
   train(model, train_loader, val_loader, weights)
-  evaluate(model, val_loader, weights, suppress_output=False)
+  evaluate(model, val_loader, weights)
 
 if __name__ == "__main__":
 
