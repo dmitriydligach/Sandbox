@@ -76,7 +76,7 @@ def to_lstm_inputs(texts, max_len):
 
   # use bert tokenizer for now
   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-  seqs = [tokenizer.encode(text, add_special_tokens=True) for text in texts]
+  seqs = [tokenizer.encode(text, max_length=512) for text in texts]
 
   if max_len is None:
     # set max_len to the length of the longest sequence
