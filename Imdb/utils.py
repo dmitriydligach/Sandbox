@@ -71,10 +71,10 @@ def to_token_id_sequences(texts, max_len=None):
 
   return ids
 
-def to_lstm_inputs(texts, max_len):
+def to_lstm_inputs(texts, max_len=None):
   """Matrix of token ids"""
 
-  # use bert tokenizer for now
+  # use bert tokenizer for now (512 tokens max)
   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
   seqs = [tokenizer.encode(text, max_length=512) for text in texts]
 

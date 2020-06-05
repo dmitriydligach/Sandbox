@@ -16,7 +16,7 @@ import os, configparser, random
 
 from sklearn.metrics import accuracy_score
 
-import imdbdata, utils
+import imdb, utils
 
 # deterministic determinism
 torch.manual_seed(2020)
@@ -149,18 +149,16 @@ def evaluate(model, data_loader, weights):
 def main():
   """Fine-tune bert"""
 
-  train_data = imdbdata.ImdbData(
+  train_data = imdb.ImdbData(
     os.path.join(base, cfg.get('data', 'dir_path')),
     partition='train',
-    max_tokens=cfg.getint('data', 'max_tokens'),
     n_files=cfg.get('data', 'n_files'))
   tr_texts, tr_labels = train_data.read()
   train_loader = make_data_loader(tr_texts, tr_labels, RandomSampler)
 
-  val_data = imdbdata.ImdbData(
+  val_data = imdb.ImdbData(
     os.path.join(base, cfg.get('data', 'dir_path')),
     partition='test',
-    max_tokens=cfg.getint('data', 'max_tokens'),
     n_files=cfg.get('data', 'n_files'))
   val_texts, val_labels = val_data.read()
   val_loader = make_data_loader(val_texts, val_labels, SequentialSampler)
