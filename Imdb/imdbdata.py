@@ -15,9 +15,11 @@ class ImdbData:
     self,
     dir_path,
     partition,
+    max_tokens,
     n_files='all'):
     """"Deconstructing unconstructable"""
 
+    self.max_tokens = max_tokens # bert only handles up to 512
     self.pos_dir = os.path.join(dir_path, partition, 'pos/')
     self.neg_dir = os.path.join(dir_path, partition, 'neg/')
     self.n_files = None if n_files == 'all' else int(n_files)
@@ -29,10 +31,16 @@ class ImdbData:
     labels = []
 
     for file in glob.glob(self.pos_dir + '*.txt')[:self.n_files]:
-      texts.append(open(file).read().rstrip())
+      tokens = open(file).read().split()
+      if len(tokens) > self.max_tokens:
+        tokens = tokens[:self.max_tokens]
+      texts.append(' '.join(tokens))
       labels.append(1)
     for file in glob.glob(self.neg_dir + '*.txt')[:self.n_files]:
-      texts.append(open(file).read().rstrip())
+      tokens = open(file).read().split()
+      if len(tokens) > self.max_tokens:
+        tokens = tokens[:self.max_tokens]
+      texts.append(' '.join(tokens))
       labels.append(0)
 
     return texts, labels
@@ -46,6 +54,7 @@ if __name__ == "__main__":
   dat = ImdbData(
     os.path.join(base, cfg.get('data', 'dir_path')),
     partition='train',
+    max_tokens=cfg.getint('data', 'max_tokens'),
     n_files=cfg.get('data', 'n_files'))
 
   texts, labels = dat.read()

@@ -2,7 +2,6 @@
 
 import sys
 sys.dont_write_bytecode = True
-sys.path.append('../Lib/')
 
 import torch
 import torch.nn as nn
@@ -15,7 +14,7 @@ from torch.utils.data import RandomSampler, SequentialSampler
 import numpy as np
 import os, configparser, random
 
-import metrics, reldata
+import imdbdata, utils
 
 # deterministic determinism
 torch.manual_seed(2020)
@@ -56,25 +55,10 @@ class LstmClassifier(nn.Module):
 
     return logits
 
-def to_inputs(texts, pad_token=0):
-  """Converts texts into input matrices"""
-
-  tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-
-  rows = [tokenizer.encode(text, add_special_tokens=True) for text in texts]
-  shape = (len(rows), max(len(row) for row in rows))
-  token_ids = np.full(shape=shape, fill_value=pad_token)
-
-  for i, row in enumerate(rows):
-    token_ids[i, -len(row):] = row
-  token_ids = torch.tensor(token_ids)
-
-  return token_ids
-
 def make_data_loader(texts, labels, sampler):
   """DataLoader objects for train or dev/test sets"""
 
-  input_ids = to_inputs(texts)
+  input_ids = utils.to_lstm_inputs(texts)
   labels = torch.tensor(labels)
 
   tensor_dataset = TensorDataset(input_ids, labels)
@@ -168,18 +152,20 @@ def evaluate(model, data_loader, weights, suppress_output=True):
 def main():
   """Fine-tune bert"""
 
-  train_data = reldata.RelData(
-    os.path.join(base, cfg.get('data', 'xmi_dir')),
+  train_data = imdbdata.ImdbData(
+    os.path.join(base, cfg.get('data', 'dir_path')),
     partition='train',
+    max_tokens=cfg.getint('data', 'max_tokens'),
     n_files=cfg.get('data', 'n_files'))
-  tr_texts, tr_labels = train_data.event_time_relations()
+  tr_texts, tr_labels = train_data.read()
   train_loader = make_data_loader(tr_texts, tr_labels, RandomSampler)
 
   val_data = reldata.RelData(
-    os.path.join(base, cfg.get('data', 'xmi_dir')),
-    partition='dev',
+    os.path.join(base, cfg.get('data', 'dir_path')),
+    partition='test',
+    max_tokens=cfg.getint('data', 'max_tokens'),
     n_files=cfg.get('data', 'n_files'))
-  val_texts, val_labels = val_data.event_time_relations()
+  val_texts, val_labels = val_data.read()
   val_loader = make_data_loader(val_texts, val_labels, SequentialSampler)
 
   model = LstmClassifier()
