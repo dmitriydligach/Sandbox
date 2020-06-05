@@ -71,7 +71,7 @@ def to_token_id_sequences(texts, max_len=None):
 
   return ids
 
-def to_lstm_inputs(texts, max_len=None):
+def to_lstm_inputs(texts, max_len):
   """Matrix of token ids"""
 
   # use bert tokenizer for now

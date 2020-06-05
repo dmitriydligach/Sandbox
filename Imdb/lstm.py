@@ -60,7 +60,7 @@ class LstmClassifier(nn.Module):
 def make_data_loader(texts, labels, sampler):
   """DataLoader objects for train or dev/test sets"""
 
-  input_ids = utils.to_lstm_inputs(texts)
+  input_ids = utils.to_lstm_inputs(texts, max_len=512)
   labels = torch.tensor(labels)
 
   tensor_dataset = TensorDataset(input_ids, labels)
@@ -107,7 +107,7 @@ def train(model, train_loader, val_loader, weights):
 
     av_loss = train_loss / num_train_steps
     val_loss, f1 = evaluate(model, val_loader, weights)
-    print('epoch: %d, train loss: %.3f, val loss: %.3f, val f1: %.3f' % \
+    print('epoch: %d, train loss: %.3f, val loss: %.3f, val acc: %.3f' % \
           (epoch, av_loss, val_loss, f1))
 
 def evaluate(model, data_loader, weights):
@@ -165,13 +165,14 @@ def main():
   val_texts, val_labels = val_data.read()
   val_loader = make_data_loader(val_texts, val_labels, SequentialSampler)
 
+  print('loaded %d train, %d val samples' % (len(tr_texts), len(val_texts)))
+
   model = LstmClassifier()
 
   label_counts = torch.bincount(torch.IntTensor(tr_labels))
   weights = len(tr_labels) / (2.0 * label_counts)
 
   train(model, train_loader, val_loader, weights)
-  evaluate(model, val_loader, weights)
 
 if __name__ == "__main__":
 

@@ -33,13 +33,13 @@ class ImdbData:
     for file in glob.glob(self.pos_dir + '*.txt')[:self.n_files]:
       tokens = open(file).read().split()
       if len(tokens) > self.max_tokens:
-        tokens = tokens[:self.max_tokens]
+        continue
       texts.append(' '.join(tokens))
       labels.append(1)
     for file in glob.glob(self.neg_dir + '*.txt')[:self.n_files]:
       tokens = open(file).read().split()
       if len(tokens) > self.max_tokens:
-        tokens = tokens[:self.max_tokens]
+        continue
       texts.append(' '.join(tokens))
       labels.append(0)
 
