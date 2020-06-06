@@ -15,7 +15,9 @@ from transformers import BertTokenizer
 import numpy as np
 import os, configparser, random
 
-import reldata, metrics, utils
+from sklearn.metrics import accuracy_score
+
+import imdb, utils
 
 # deterministic determinism
 torch.manual_seed(2020)
@@ -56,7 +58,7 @@ class BagOfEmbeddings(nn.Module):
     output = self.embed(texts)
     output = torch.mean(output, dim=1)
     output = self.hidden1(output)
-    output = self.hidden2(output)
+    # output = self.hidden2(output)
     output = self.dropout(output)
     output = self.classif(output)
 
@@ -65,9 +67,7 @@ class BagOfEmbeddings(nn.Module):
 def make_data_loader(texts, labels, sampler):
   """DataLoader objects for train or dev/test sets"""
 
-  input_ids = utils.to_token_id_sequences(
-    texts,
-    cfg.getint('data', 'max_len'))
+  input_ids = utils.to_token_id_sequences(texts)
   labels = torch.tensor(labels)
 
   tensor_dataset = TensorDataset(input_ids, labels)
@@ -113,9 +113,9 @@ def train(model, train_loader, val_loader, weights):
       num_train_steps += 1
 
     av_loss = train_loss / num_train_steps
-    val_loss, f1 = evaluate(model, val_loader, weights)
-    print('epoch: %d, train loss: %.3f, val loss: %.3f, val f1: %.3f' % \
-          (epoch, av_loss, val_loss, f1))
+    val_loss, acc = evaluate(model, val_loader, weights)
+    print('ep: %d, steps: %d, tr loss: %.3f, val loss: %.3f, val acc: %.3f' % \
+          (epoch, num_train_steps, av_loss, val_loss, acc))
 
 def evaluate(model, data_loader, weights, suppress_output=True):
   """Evaluation routine"""
@@ -150,30 +150,28 @@ def evaluate(model, data_loader, weights, suppress_output=True):
     total_loss += loss.item()
     num_steps += 1
 
-  f1 = metrics.f1(all_labels,
-                  all_predictions,
-                  reldata.int2label,
-                  reldata.label2int,
-                  suppress_output)
-
-  return total_loss / num_steps, f1
+  accuracy = accuracy_score(all_labels, all_predictions)
+  return total_loss / num_steps, accuracy
 
 def main():
   """Fine-tune bert"""
 
-  train_data = reldata.RelData(
-    os.path.join(base, cfg.get('data', 'xmi_dir')),
+  train_data = imdb.ImdbData(
+    os.path.join(base, cfg.get('data', 'dir_path')),
     partition='train',
     n_files=cfg.get('data', 'n_files'))
-  tr_texts, tr_labels = train_data.event_time_relations()
+  tr_texts, tr_labels = train_data.read()
   train_loader = make_data_loader(tr_texts, tr_labels, RandomSampler)
 
-  val_data = reldata.RelData(
-    os.path.join(base, cfg.get('data', 'xmi_dir')),
-    partition='dev',
+  val_data = imdb.ImdbData(
+    os.path.join(base, cfg.get('data', 'dir_path')),
+    partition='test',
     n_files=cfg.get('data', 'n_files'))
-  val_texts, val_labels = val_data.event_time_relations()
+  val_texts, val_labels = val_data.read()
   val_loader = make_data_loader(val_texts, val_labels, SequentialSampler)
+
+  print('loaded %d training and %d validation samples' % \
+        (len(tr_texts), len(val_texts)))
 
   model = BagOfEmbeddings()
 
@@ -181,7 +179,6 @@ def main():
   weights = len(tr_labels) / (2.0 * label_counts)
 
   train(model, train_loader, val_loader, weights)
-  evaluate(model, val_loader, weights, suppress_output=False)
 
 if __name__ == "__main__":
 
