@@ -4,11 +4,16 @@ import torch
 import numpy as np
 from transformers import BertTokenizer
 
+# need to add max_length=512 parameter to tokenizer.encode()
+# otherwise getting warnings about sequences' being too long
+# this is because IMDB data has sequences with over 2K tokens
+# although mean sequence length is around 234 tokens
+
 def to_bert_inputs(texts, max_len=None, pad_token=0):
   """Converts texts into input matrices required by BERT"""
 
   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-  id_seqs = [tokenizer.encode(text, add_special_tokens=True) for text in texts]
+  id_seqs = [tokenizer.encode(text, max_length=512) for text in texts]
 
   if max_len is None:
     # set max_len to the length of the longest sequence
@@ -56,7 +61,7 @@ def to_token_id_sequences(texts, max_len=None):
 
   # use bert tokenizer for now
   tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-  seqs = [tokenizer.encode(text, add_special_tokens=True) for text in texts]
+  seqs = [tokenizer.encode(text, max_length=512) for text in texts]
 
   if max_len is None:
     # set max_len to the length of the longest sequence
