@@ -11,7 +11,6 @@ from torch.utils.data import TensorDataset, DataLoader
 from torch.utils.data import RandomSampler, SequentialSampler
 
 from transformers import BertTokenizer
-from transformers import get_linear_schedule_with_warmup
 
 import numpy as np
 import os, configparser, math, random
@@ -72,11 +71,11 @@ class TransformerClassifier(nn.Module):
     output = output.permute(1, 0, 2)
     output = self.trans_encoder(output, attention_mask)
 
-    # extract CLS token only
-    # output = output[0, :, :]
-
     # average pooling
-    output = torch.mean(output, dim=0)
+    # output = torch.mean(output, dim=0)
+
+    # extract CLS token only
+    output = output[0, :, :]
 
     output = self.dropout(output)
     output = self.linear(output)
@@ -116,9 +115,7 @@ class PositionalEncoding(nn.Module):
 def make_data_loader(texts, labels, sampler):
   """DataLoader objects for train or dev/test sets"""
 
-  input_ids, attention_mask = utils.to_transformer_inputs(
-    texts,
-    cfg.getint('data', 'max_len'))
+  input_ids, attention_mask = utils.to_transformer_inputs(texts)
   labels = torch.tensor(labels)
 
   tensor_dataset = TensorDataset(input_ids, attention_mask, labels)
@@ -140,14 +137,9 @@ def train(model, train_loader, val_loader, weights):
   weights = weights.to(device)
   cross_entropy_loss = torch.nn.CrossEntropyLoss(weights)
 
-  optimizer = torch.optim.AdamW(
+  optimizer = torch.optim.Adam(
     model.parameters(),
     lr=cfg.getfloat('model', 'lr'))
-
-  scheduler = get_linear_schedule_with_warmup(
-    optimizer,
-    num_warmup_steps=100,
-    num_training_steps=1000)
 
   for epoch in range(1, cfg.getint('model', 'num_epochs') + 1):
     model.train()
@@ -165,7 +157,6 @@ def train(model, train_loader, val_loader, weights):
 
       torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
       optimizer.step()
-      scheduler.step()
 
       train_loss += loss.item()
       num_train_steps += 1
