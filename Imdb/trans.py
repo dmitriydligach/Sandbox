@@ -92,7 +92,7 @@ class PositionalEncoding(nn.Module):
 
     self.dropout = nn.Dropout(p=0.1)
 
-    max_len = cfg.getint('data', 'max_len')
+    max_len = 512 # bert tokenizer can't handle more
     pe = torch.zeros(max_len, embedding_dim)
 
     position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
