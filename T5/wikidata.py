@@ -96,3 +96,8 @@ if __name__ == "__main__":
   tokenizer = T5Tokenizer.from_pretrained('t5-small')
   dataset = WikiHow(tokenizer, 'validation', None, 512, 150, True)
   print('dataset length:', len(dataset))
+
+  data = dataset[50]
+  print("Shape of Tokenized Text: ", data['source_ids'].shape)
+  print("Sanity check - Decode Text: ", tokenizer.decode(data['source_ids']))
+  print("Sanity check - Decode Summary: ", tokenizer.decode(data['target_ids']))

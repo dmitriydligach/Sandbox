@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# https://towardsdatascience.com/fine-tuning-a-t5-transformer-for-any-summarization-task-82334c64c81
 
 import argparse
 import glob
@@ -30,7 +31,13 @@ from transformers import (
     get_linear_schedule_with_warmup
 )
 
-# https://towardsdatascience.com/fine-tuning-a-t5-transformer-for-any-summarization-task-82334c64c81
+def set_seed(seed):
+  random.seed(seed)
+  np.random.seed(seed)
+  torch.manual_seed(seed)
+  if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(seed)
+set_seed(42)
 
 class T5FineTuner(pl.LightningModule):
   """Fine-tune T5 for summarization"""
@@ -75,7 +82,7 @@ class T5FineTuner(pl.LightningModule):
     return list(map(f, x))
 
   def is_logger(self):
-    return self.trainer.proc_rank <= 0
+    return self.trainer.global_rank <= 0
 
   def parse_score(self, result):
     return {k: round(v.mid.fmeasure * 100, 4) for k, v in result.items()}
@@ -93,7 +100,7 @@ class T5FineTuner(pl.LightningModule):
       attention_mask=attention_mask,
       decoder_input_ids=decoder_input_ids,
       decoder_attention_mask=decoder_attention_mask,
-      lm_labels=lm_labels,)
+      labels=lm_labels,)
 
   def _step(self, batch):
     lm_labels = batch["target_ids"]
@@ -141,7 +148,7 @@ class T5FineTuner(pl.LightningModule):
 
     summ_len = np.mean(self.lmap(len, generated_ids))
     base_metrics.update(gen_time=gen_time, gen_len=summ_len, preds=preds, target=target)
-    self.rouge_metric.add_batch(preds, target)
+    self.rouge_metric.add_batch(predictions=preds, references=target)
 
     return base_metrics
 
@@ -195,14 +202,29 @@ class T5FineTuner(pl.LightningModule):
     self.opt = optimizer
     return [optimizer]
 
-  def optimizer_step(self, epoch, batch_idx, optimizer, optimizer_idx, second_order_closure=None,
-                     using_native_amp=False):
-    if self.trainer.use_tpu:
-      xm.optimizer_step(optimizer)
-    else:
-      optimizer.step()
+  def optimizer_step(self,
+                     epoch,
+                     batch_idx,
+                     optimizer,
+                     optimizer_idx,
+                     second_order_closure=None):
+
+    optimizer.step()
     optimizer.zero_grad()
     self.lr_scheduler.step()
+
+    # def optimizer_step(
+    #  self,
+    #  epoch,
+    #  batch_idx,
+    #  optimizer,
+    #  optimizer_idx,
+    #  optimizer_closure=None,
+    #  using_native_amp=False):
+
+    # optimizer.step()
+    # optimizer.zero_grad()
+    # self.lr_scheduler.step()
 
   def get_tqdm_dict(self):
     tqdm_dict = {"loss": "{:.3f}".format(self.trainer.avg_loss), "lr": self.lr_scheduler.get_last_lr()[-1]}
@@ -238,6 +260,98 @@ class T5FineTuner(pl.LightningModule):
 
     return DataLoader(test_dataset, batch_size=self.hparams.eval_batch_size, num_workers=4)
 
-if __name__ == "__main__":
+logger = logging.getLogger(__name__)
 
-  print('hello')
+class LoggingCallback(pl.Callback):
+    def on_validation_end(self, trainer, pl_module):
+        logger.info("***** Validation results *****")
+        if pl_module.is_logger():
+            metrics = trainer.callback_metrics
+            # Log results
+            for key in sorted(metrics):
+                if key not in ["log", "progress_bar"]:
+                    logger.info("{} = {}\n".format(key, str(metrics[key])))
+
+    def on_test_end(self, trainer, pl_module):
+        logger.info("***** Test results *****")
+
+        if pl_module.is_logger():
+            metrics = trainer.callback_metrics
+
+            # Log and save results to file
+            output_test_results_file = os.path.join(pl_module.hparams.output_dir, "test_results.txt")
+            with open(output_test_results_file, "w") as writer:
+                for key in sorted(metrics):
+                    if key not in ["log", "progress_bar"]:
+                        logger.info("{} = {}\n".format(key, str(metrics[key])))
+                        writer.write("{} = {}\n".format(key, str(metrics[key])))
+
+if __name__ == "__main__":
+  "My kind of street"
+
+  args_dict = dict(
+    output_dir="",  # path to save the checkpoints
+    model_name_or_path='t5-small',
+    tokenizer_name_or_path='t5-small',
+    max_input_length=512,
+    max_output_length=150,
+    freeze_encoder=False,
+    freeze_embeds=False,
+    learning_rate=3e-4,
+    weight_decay=0.0,
+    adam_epsilon=1e-8,
+    warmup_steps=0,
+    train_batch_size=4,
+    eval_batch_size=4,
+    num_train_epochs=2,
+    gradient_accumulation_steps=1,
+    n_gpu=1,
+    resume_from_checkpoint=None,
+    val_check_interval=0.05,
+    n_val=1000,
+    n_train=-1,
+    n_test=-1,
+    early_stop_callback=False,
+    fp_16=False,  # if you want to enable 16-bit training then install apex and set this to true
+    opt_level='O1',
+    # you can find out more on optimisation levels here https://nvidia.github.io/apex/amp.html#opt-levels-and-properties
+    max_grad_norm=1.0,  # if you enable 16-bit training then set this to a sensible value, 0.5 is a good default
+    seed=42,
+  )
+
+  args_dict.update({'output_dir': 't5_wikihow', 'num_train_epochs': 2,
+                    'train_batch_size': 4, 'eval_batch_size': 4})
+  args = argparse.Namespace(**args_dict)
+  print(args_dict)
+
+
+## Define Checkpoint function
+checkpoint_callback = pl.callbacks.ModelCheckpoint(
+    filepath=args.output_dir, prefix="checkpoint", monitor="val_loss", mode="min", save_top_k=3
+)
+
+## If resuming from checkpoint, add an arg resume_from_checkpoint
+train_params = dict(
+    accumulate_grad_batches=args.gradient_accumulation_steps,
+    gpus=args.n_gpu,
+    max_epochs=args.num_train_epochs,
+    precision= 16 if args.fp_16 else 32,
+    amp_level=args.opt_level,
+    resume_from_checkpoint=args.resume_from_checkpoint,
+    gradient_clip_val=args.max_grad_norm,
+    checkpoint_callback=checkpoint_callback,
+    val_check_interval=args.val_check_interval,
+    # logger=wandb_logger,
+    callbacks=[LoggingCallback()],
+)
+
+import wikidata
+def get_dataset(tokenizer, type_path, num_samples, args):
+  return wikidata.WikiHow(tokenizer=tokenizer, type_path=type_path, num_samples=num_samples, input_length=args.max_input_length,
+                 output_length=args.max_output_length)
+
+model = T5FineTuner(args)
+
+trainer = pl.Trainer(**train_params)
+
+trainer.fit(model)
