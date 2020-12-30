@@ -3,34 +3,31 @@
 from torch.utils.data import Dataset
 from datasets import load_dataset
 
-from transformers import (
-    AdamW,
-    T5ForConditionalGeneration,
-    T5Tokenizer,
-    get_linear_schedule_with_warmup
-)
+from transformers import T5Tokenizer
 
-# https://towardsdatascience.com/fine-tuning-a-t5-transformer-for-any-summarization-task-82334c64c81
+# based on a blog post from: https://towardsdatascience.com/
+# fine-tuning-a-t5-transformer-for-any-summarization-task-82334c64c81
 
 class WikiHow(Dataset):
   """WikiHow data"""
 
-  def __init__(self, tokenizer, type_path, num_samples, input_length, output_length, print_text=False):
-    """Constructing the deconstruction"""
+  def __init__(
+   self,
+   tokenizer,
+   split,
+   input_length=512,
+   output_length=100):
+    """Wikihow train, validation, or test set"""
 
     self.dataset = load_dataset(
       'wikihow',
       'all',
       data_dir='Data/',
-      split=type_path)
+      split=split)
 
-    if num_samples:
-      self.dataset = self.dataset.select(list(range(0, num_samples)))
-
-    self.input_length = input_length
     self.tokenizer = tokenizer
+    self.input_length = input_length
     self.output_length = output_length
-    self.print_text = print_text
 
   def __len__(self):
     """Requried by pytorch"""
@@ -48,28 +45,25 @@ class WikiHow(Dataset):
 
     return text
 
-  def convert_to_features(self, example_batch):
+  def convert_to_features(self, instance):
     """Tokenize contexts and questions (as pairs of inputs)"""
 
-    if self.print_text:
-      print("Input Text: ", self.clean_text(example_batch['text']))
-
-    input_ = self.clean_text(example_batch['text'])
-    target_ = self.clean_text(example_batch['headline'])
+    input_ = self.clean_text(instance['text'])
+    target_ = self.clean_text(instance['headline'])
 
     source = self.tokenizer.batch_encode_plus(
       [input_],
       max_length=self.input_length,
       padding='max_length',
       truncation=True,
-      return_tensors="pt")
+      return_tensors='pt')
 
     targets = self.tokenizer.batch_encode_plus(
       [target_],
       max_length=self.output_length,
       padding='max_length',
       truncation=True,
-      return_tensors="pt")
+      return_tensors='pt')
 
     return source, targets
 
@@ -81,23 +75,25 @@ class WikiHow(Dataset):
     source_ids = source["input_ids"].squeeze()
     target_ids = targets["input_ids"].squeeze()
 
-    src_mask = source["attention_mask"].squeeze()
+    source_mask = source["attention_mask"].squeeze()
     target_mask = targets["attention_mask"].squeeze()
 
-    return {
-      "source_ids": source_ids,
-      "source_mask": src_mask,
-      "target_ids": target_ids,
-      "target_mask": target_mask}
+    # return {
+    #   "source_ids": source_ids,
+    #   "source_mask": source_mask,
+    #   "target_ids": target_ids,
+    #   "target_mask": target_mask}
+
+    return source_ids, source_mask, target_ids, target_mask
 
 if __name__ == "__main__":
   """My main man"""
 
   tokenizer = T5Tokenizer.from_pretrained('t5-small')
-  dataset = WikiHow(tokenizer, 'validation', None, 512, 150, True)
+  dataset = WikiHow(tokenizer, 'validation')
   print('dataset length:', len(dataset))
 
   data = dataset[50]
-  print("Shape of Tokenized Text: ", data['source_ids'].shape)
-  print("Sanity check - Decode Text: ", tokenizer.decode(data['source_ids']))
-  print("Sanity check - Decode Summary: ", tokenizer.decode(data['target_ids']))
+  print("instance shape: ", data['source_ids'].shape)
+  print("text: ", tokenizer.decode(data['source_ids']))
+  print("summary: ", tokenizer.decode(data['target_ids']))
