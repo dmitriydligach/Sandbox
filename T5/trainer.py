@@ -43,19 +43,19 @@ class T5FineTuner(nn.Module):
    attention_mask,
    decoder_input_ids,
    decoder_attention_mask,
-   lm_labels=None):
+   labels):
     """Forwarding"""
 
     output = self.model(
-      input_ids,
+      input_ids=input_ids,
       attention_mask=attention_mask,
       decoder_input_ids=decoder_input_ids,
       decoder_attention_mask=decoder_attention_mask,
-      labels=lm_labels)
+      labels=labels)
 
     return output
 
-def fit(model, train_loader, val_loader, n_epochs):
+def fit(model, train_loader, val_loader, tokenizer, n_epochs):
   """Training routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -73,7 +73,15 @@ def fit(model, train_loader, val_loader, n_epochs):
       batch = tuple(t.to(device) for t in batch)
       source_ids, source_mask, target_ids, target_mask = batch
 
-      outputs = model(source_ids, source_mask, target_ids, target_mask)
+      labels = target_ids
+      labels[labels[:, :] == tokenizer.pad_token_id] = -100
+
+      outputs = model(
+        input_ids=source_ids,
+        attention_mask=source_mask,
+        decoder_input_ids=None,
+        decoder_attention_mask=target_mask,
+        labels=labels)
       loss = outputs[0]
 
       loss.backward()
@@ -142,7 +150,7 @@ def run_it(args):
     batch_size=4)
 
   model = T5FineTuner(args)
-  fit(model, train_data_loader, val_data_loader, n_epochs=3)
+  fit(model, train_data_loader, val_data_loader, tokenizer, n_epochs=3)
 
 if __name__ == "__main__":
   "My kind of street"
