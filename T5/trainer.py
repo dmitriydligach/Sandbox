@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-import argparse
 import sys
-import time
-
 sys.path.append('../Lib/')
 
 import torch
@@ -11,7 +8,7 @@ import torch.nn as nn
 
 from torch.utils.data import DataLoader
 
-import random
+import random, argparse
 import wikidata
 
 from transformers import (
@@ -26,8 +23,6 @@ torch.manual_seed(2020)
 # torch.backends.cudnn.benchmark = False
 random.seed(2020)
 
-model_name = 't5-small'
-
 class T5FineTuner(nn.Module):
   """A transformative experience"""
 
@@ -35,7 +30,8 @@ class T5FineTuner(nn.Module):
     """Some of the best constructors in the world"""
 
     super(T5FineTuner, self).__init__()
-    self.model = T5ForConditionalGeneration.from_pretrained(model_name)
+    self.model = T5ForConditionalGeneration.from_pretrained(
+      hparams.model_name)
 
   def forward(
    self,
@@ -55,7 +51,7 @@ class T5FineTuner(nn.Module):
 
     return output
 
-def fit(model, train_loader, val_loader, tokenizer, n_epochs):
+def fit(model, train_loader, val_loader, tokenizer):
   """Training routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -63,7 +59,7 @@ def fit(model, train_loader, val_loader, tokenizer, n_epochs):
 
   optimizer = AdamW(model.parameters())
 
-  for epoch in range(1, n_epochs + 1):
+  for epoch in range(1, hparams.n_epochs + 1):
     train_loss, num_train_steps = 0, 0
     model.train()
 
@@ -125,9 +121,8 @@ def evaluate(model, data_loader, tokenizer):
     total_loss += loss.item()
     num_steps += 1
 
-  av_loss = total_loss / num_steps
-
-  return av_loss
+  average_loss = total_loss / num_steps
+  return average_loss
 
 def generate(model, data_loader, tokenizer):
   """Need to add 'summarize' if run before training"""
@@ -142,12 +137,10 @@ def generate(model, data_loader, tokenizer):
 
     inputs = tokenizer.batch_decode(source_ids)
     targets = tokenizer.batch_decode(target_ids)
-    print('input:', inputs[0])
-    print('target:', targets[0])
 
     predictions = model.model.generate(
       input_ids=source_ids,
-      max_length=50,
+      max_length=hparams.max_output_length,
       early_stopping=True,
       num_beams=2,
       attention_mask=source_mask)
@@ -155,57 +148,42 @@ def generate(model, data_loader, tokenizer):
       predictions,
       skip_special_tokens=True,
       clean_up_tokenization_spaces=True)
-    print('predictions:', predictions[0])
+
+    print('input:', inputs[0])
+    print('target:', targets[0])
+    print('prediction:', predictions[0])
     print()
 
-def run_it():
+def main():
   """Fine-tune on summarization data"""
 
-  tokenizer = T5Tokenizer.from_pretrained(model_name)
+  tokenizer = T5Tokenizer.from_pretrained(hparams.model_name)
 
   train_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='train')
-  train_data_loader = DataLoader( # batch generator
+  train_data_loader = DataLoader(
     train_dataset,
-    batch_size=64)
+    batch_size=hparams.batch_size)
 
   val_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='validation')
-  val_data_loader = DataLoader( # batch generator
+  val_data_loader = DataLoader(
     val_dataset,
-    batch_size=64)
+    batch_size=hparams.batch_size)
 
   model = T5FineTuner()
-  fit(model, train_data_loader, val_data_loader, tokenizer, n_epochs=3)
+
+  fit(model, train_data_loader, val_data_loader, tokenizer)
   generate(model, val_data_loader, tokenizer)
 
 if __name__ == "__main__":
   "My kind of street"
 
-  args_dict = dict(
-    model_name_or_path='t5-small',
-    tokenizer_name_or_path='t5-small',
+  hparam_dict = dict(
+    model_name='t5-base',
     max_input_length=512,
-    max_output_length=150,
-    freeze_encoder=False,
-    freeze_embeds=False,
-    learning_rate=3e-4,
-    weight_decay=0.0,
-    adam_epsilon=1e-8,
-    warmup_steps=0,
-    train_batch_size=4,
-    eval_batch_size=4,
-    num_train_epochs=2,
-    gradient_accumulation_steps=1,
-    n_gpu=1,
-    resume_from_checkpoint=None,
-    val_check_interval=0.05,
-    n_val=1000,
-    n_train=-1,
-    n_test=-1,
-    early_stop_callback=False,
-    fp_16=False,
-    opt_level='O1',
-    max_grad_norm=1.0,
-    seed=42)
-  args = argparse.Namespace(**args_dict)
+    max_output_length=100,
+    batch_size=32,
+    n_epochs=5)
+  hparams = argparse.Namespace(**hparam_dict)
+  print('hyper-parameters:', hparams)
 
-  run_it()
+  main()
