@@ -43,7 +43,7 @@ class WikiHow(Dataset):
 
     return text
 
-  def convert_to_features(self, instance):
+  def to_int_seqs(self, instance):
     """Prepare inputs and outputs"""
 
     text = self.clean_text(instance['text'])
@@ -68,13 +68,13 @@ class WikiHow(Dataset):
   def __getitem__(self, index):
     """Required by pytorch"""
 
-    text, summary = self.convert_to_features(self.dataset[index])
+    text, summary = self.to_int_seqs(self.dataset[index])
 
-    input_ids = text['input_ids'].squeeze()
-    input_mask = text['attention_mask'].squeeze()
+    input_ids = text.input_ids.squeeze()
+    input_mask = text.attention_mask.squeeze()
 
-    output_ids = summary['input_ids'].squeeze()
-    output_mask = summary['attention_mask'].squeeze()
+    output_ids = summary.input_ids.squeeze()
+    output_mask = summary.attention_mask.squeeze()
 
     return input_ids, input_mask, output_ids, output_mask
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
   dataset = WikiHow(tokenizer, 'validation')
   print('dataset length:', len(dataset))
 
-  data = dataset[50]
-  print("instance shape: ", data['source_ids'].shape)
-  print("text: ", tokenizer.decode(data['source_ids']))
-  print("summary: ", tokenizer.decode(data['target_ids']))
+  input_ids, input_mask, output_ids, output_mask = dataset[50]
+  print('instance shape:', input_ids.shape)
+  print('text:', tokenizer.decode(input_ids))
+  print('summary:', tokenizer.decode(output_ids))
