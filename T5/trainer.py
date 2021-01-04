@@ -29,12 +29,10 @@ model_name = 't5-small'
 class T5FineTuner(nn.Module):
   """A transformative experience"""
 
-  def __init__(self, hparams):
+  def __init__(self):
     """Some of the best constructors in the world"""
 
     super(T5FineTuner, self).__init__()
-
-    self.hparams = hparams
     self.model = T5ForConditionalGeneration.from_pretrained(model_name)
 
   def forward(
@@ -64,8 +62,8 @@ def fit(model, train_loader, val_loader, tokenizer, n_epochs):
   optimizer = AdamW(model.parameters())
 
   for epoch in range(1, n_epochs + 1):
-    model.train()
     train_loss, num_train_steps = 0, 0
+    model.train()
 
     for batch in train_loader:
       optimizer.zero_grad()
@@ -93,39 +91,34 @@ def fit(model, train_loader, val_loader, tokenizer, n_epochs):
       num_train_steps += 1
 
     av_loss = train_loss / num_train_steps
-    # val_loss, roc_auc = evaluate(model, val_loader)
-    # print('ep: %d, steps: %d, tr loss: %.3f, val loss: %.3f, val roc: %.3f' % \
-    #       (epoch, num_train_steps, av_loss, val_loss, roc_auc))
+    val_loss = evaluate(model, val_loader, tokenizer)
+    print('ep: %d, steps: %d, tr loss: %.3f, val loss: %.3f' % \
+          (epoch, num_train_steps, av_loss, val_loss))
 
-def evaluate(model, data_loader, weights):
+def evaluate(model, data_loader, tokenizer):
   """Evaluation routine"""
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  weights = weights.to(device)
   model.to(device)
 
-  cross_entropy_loss = torch.nn.CrossEntropyLoss(weights)
   total_loss, num_steps = 0, 0
-
   model.eval()
-
-  all_labels = []
-  all_probs = []
 
   for batch in data_loader:
     batch = tuple(t.to(device) for t in batch)
-    batch_inputs, batch_labels = batch
+    source_ids, source_mask, target_ids, target_mask = batch
+
+    labels = target_ids
+    labels[labels[:, :] == tokenizer.pad_token_id] = -100
 
     with torch.no_grad():
-      logits = model(batch_inputs)
-      loss = cross_entropy_loss(logits, batch_labels)
-
-    batch_logits = logits.detach().to('cpu')
-    batch_labels = batch_labels.to('cpu')
-    batch_probs = torch.nn.functional.softmax(batch_logits, dim=1)[:, 1]
-
-    all_labels.extend(batch_labels.tolist())
-    all_probs.extend(batch_probs.tolist())
+      outputs = model(
+        input_ids=source_ids,
+        attention_mask=source_mask,
+        decoder_input_ids=None,
+        decoder_attention_mask=target_mask,
+        labels=labels)
+      loss = outputs[0]
 
     total_loss += loss.item()
     num_steps += 1
@@ -134,7 +127,7 @@ def evaluate(model, data_loader, weights):
 
   return av_loss
 
-def run_it(args):
+def run_it():
   """Fine-tune on summarization data"""
 
   tokenizer = T5Tokenizer.from_pretrained(model_name)
@@ -149,7 +142,7 @@ def run_it(args):
     val_dataset,
     batch_size=4)
 
-  model = T5FineTuner(args)
+  model = T5FineTuner()
   fit(model, train_data_loader, val_data_loader, tokenizer, n_epochs=3)
 
 if __name__ == "__main__":
@@ -180,10 +173,8 @@ if __name__ == "__main__":
     fp_16=False,
     opt_level='O1',
     max_grad_norm=1.0,
-    seed=42,
-  )
+    seed=42)
 
   args = argparse.Namespace(**args_dict)
-  print(args_dict)
 
-  run_it(args)
+  run_it()
