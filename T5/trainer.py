@@ -2,6 +2,8 @@
 
 import argparse
 import sys
+import time
+
 sys.path.append('../Lib/')
 
 import torch
@@ -127,6 +129,35 @@ def evaluate(model, data_loader, tokenizer):
 
   return av_loss
 
+def generate(model, data_loader, tokenizer):
+  """Need to add 'summarize' if run before training"""
+
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  model.to(device)
+  model.eval()
+
+  for batch in data_loader:
+    batch = tuple(t.to(device) for t in batch)
+    source_ids, source_mask, target_ids, target_mask = batch
+
+    inputs = tokenizer.batch_decode(source_ids)
+    targets = tokenizer.batch_decode(target_ids)
+    print('input:', inputs[0])
+    print('target:', targets[0])
+
+    predictions = model.model.generate(
+      input_ids=source_ids,
+      max_length=50,
+      early_stopping=True,
+      num_beams=2,
+      attention_mask=source_mask)
+    predictions = tokenizer.batch_decode(
+      predictions,
+      skip_special_tokens=True,
+      clean_up_tokenization_spaces=True)
+    print('predictions:', predictions[0])
+    print()
+
 def run_it():
   """Fine-tune on summarization data"""
 
@@ -135,15 +166,18 @@ def run_it():
   train_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='train')
   train_data_loader = DataLoader( # batch generator
     train_dataset,
-    batch_size=4)
+    batch_size=64)
 
   val_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='validation')
   val_data_loader = DataLoader( # batch generator
     val_dataset,
-    batch_size=4)
+    batch_size=64)
+
+  print('loaded datasets...')
 
   model = T5FineTuner()
   fit(model, train_data_loader, val_data_loader, tokenizer, n_epochs=3)
+  generate(model, val_data_loader, tokenizer)
 
 if __name__ == "__main__":
   "My kind of street"
@@ -174,7 +208,6 @@ if __name__ == "__main__":
     opt_level='O1',
     max_grad_norm=1.0,
     seed=42)
-
   args = argparse.Namespace(**args_dict)
 
   run_it()
