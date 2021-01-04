@@ -173,8 +173,6 @@ def run_it():
     val_dataset,
     batch_size=64)
 
-  print('loaded datasets...')
-
   model = T5FineTuner()
   fit(model, train_data_loader, val_data_loader, tokenizer, n_epochs=3)
   generate(model, val_data_loader, tokenizer)

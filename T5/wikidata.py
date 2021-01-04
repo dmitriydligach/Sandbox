@@ -35,10 +35,8 @@ class WikiHow(Dataset):
     return self.dataset.shape[0]
 
   def clean_text(self, text):
-    """Not sure what the first two lines do"""
+    """Do we even need this?"""
 
-    text = text.replace('Example of text:', '')
-    text = text.replace('Example of Summary:', '')
     text = text.replace('\n', '')
     text = text.replace('``', '')
     text = text.replace('"', '')
@@ -46,45 +44,39 @@ class WikiHow(Dataset):
     return text
 
   def convert_to_features(self, instance):
-    """Tokenize contexts and questions (as pairs of inputs)"""
+    """Prepare inputs and outputs"""
 
-    input_ = self.clean_text(instance['text'])
-    target_ = self.clean_text(instance['headline'])
+    text = self.clean_text(instance['text'])
+    summary = self.clean_text(instance['headline'])
 
-    source = self.tokenizer.batch_encode_plus(
-      [input_],
+    text = self.tokenizer(
+      [text],
       max_length=self.input_length,
       padding='max_length',
       truncation=True,
       return_tensors='pt')
 
-    targets = self.tokenizer.batch_encode_plus(
-      [target_],
+    summary = self.tokenizer(
+      [summary],
       max_length=self.output_length,
       padding='max_length',
       truncation=True,
       return_tensors='pt')
 
-    return source, targets
+    return text, summary
 
   def __getitem__(self, index):
     """Required by pytorch"""
 
-    source, targets = self.convert_to_features(self.dataset[index])
+    text, summary = self.convert_to_features(self.dataset[index])
 
-    source_ids = source["input_ids"].squeeze()
-    target_ids = targets["input_ids"].squeeze()
+    input_ids = text['input_ids'].squeeze()
+    input_mask = text['attention_mask'].squeeze()
 
-    source_mask = source["attention_mask"].squeeze()
-    target_mask = targets["attention_mask"].squeeze()
+    output_ids = summary['input_ids'].squeeze()
+    output_mask = summary['attention_mask'].squeeze()
 
-    # return {
-    #   "source_ids": source_ids,
-    #   "source_mask": source_mask,
-    #   "target_ids": target_ids,
-    #   "target_mask": target_mask}
-
-    return source_ids, source_mask, target_ids, target_mask
+    return input_ids, input_mask, output_ids, output_mask
 
 if __name__ == "__main__":
   """My main man"""
