@@ -15,8 +15,8 @@ class WikiHow(Dataset):
    self,
    tokenizer,
    split,
-   input_length=512,
-   output_length=100):
+   input_length,
+   output_length):
     """Wikihow train, validation, or test set"""
 
     self.dataset = load_dataset(
@@ -50,14 +50,14 @@ class WikiHow(Dataset):
     summary = self.clean_text(instance['headline'])
 
     text = self.tokenizer(
-      [text],
+      text,
       max_length=self.input_length,
       padding='max_length',
       truncation=True,
       return_tensors='pt')
 
     summary = self.tokenizer(
-      [summary],
+      summary,
       max_length=self.output_length,
       padding='max_length',
       truncation=True,

@@ -159,12 +159,20 @@ def main():
 
   tokenizer = T5Tokenizer.from_pretrained(hparams.model_name)
 
-  train_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='train')
+  train_dataset = wikidata.WikiHow(
+    tokenizer=tokenizer,
+    split='train',
+    input_length=hparams.max_input_length,
+    output_length=hparams.max_output_length)
   train_data_loader = DataLoader(
     train_dataset,
     batch_size=hparams.batch_size)
 
-  val_dataset = wikidata.WikiHow(tokenizer=tokenizer, split='validation')
+  val_dataset = wikidata.WikiHow(
+    tokenizer=tokenizer,
+    split='validation',
+    input_length=hparams.max_input_length,
+    output_length=hparams.max_output_length)
   val_data_loader = DataLoader(
     val_dataset,
     batch_size=hparams.batch_size)
@@ -178,9 +186,9 @@ if __name__ == "__main__":
   "My kind of street"
 
   hparam_dict = dict(
-    model_name='t5-base',
+    model_name='t5-small',
     max_input_length=512,
-    max_output_length=100,
+    max_output_length=150,
     batch_size=32,
     n_epochs=5)
   hparams = argparse.Namespace(**hparam_dict)
