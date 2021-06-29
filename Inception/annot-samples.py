@@ -8,19 +8,6 @@ assessment_plan_type = 'webanno.custom.AssessmentPlanLink'
 xmi_file_path = '/Users/Dima/Work/Wisconsin/AssessAndPlan/Ryan_Inception_Export/101125.xmi'
 type_system_path = '/Users/Dima/Work/Wisconsin/AssessAndPlan/Ryan_Inception_Export/TypeSystem.xml'
 
-
-class color:
-  PURPLE = '\033[95m'
-  CYAN = '\033[96m'
-  DARKCYAN = '\033[36m'
-  BLUE = '\033[94m'
-  GREEN = '\033[92m'
-  YELLOW = '\033[93m'
-  RED = '\033[91m'
-  BOLD = '\033[1m'
-  UNDERLINE = '\033[4m'
-  END = '\033[0m'
-
 def assessment_plan_link():
   """Extract events and times"""
 
@@ -33,17 +20,22 @@ def assessment_plan_link():
   # iterate over sentences extracting events and times
   for section in sys_view.select(assessment_plan_type):
 
-    if(section.next):
-      print('RELATION TYPE:', section.referenceRelation)
-      print('-' * 100)
+    # there's a single assessment per note
+    if(section.referenceType == 'Assessment'):
+      print('-' * 75)
+      print('ASSESSMENT SECTION')
+      print('-' * 75)
+      print(section.get_covered_text())
+      print('=' * 75)
 
-      print('SOURCE SECTION TYPE:', section.next.referenceType)
-      print('SOURCE SECTION TEXT:\n', section.next.get_covered_text())
-      print('-' * 100)
-
-      print('TARGET SECTION TYPE:', section.referenceType)
-      print('TARGET SECTION TEXT:\n', section.get_covered_text())
-      print('='*100)
+    # there are multiple treatment plans per note
+    else:
+      print('TREATMENT PLAN SECTION')
+      print('-' * 75)
+      print(section.get_covered_text())
+      print('-' * 75)
+      print('RELATION TO ASSESSMENT SECTION:', section.referenceRelation)
+      print('=' * 75)
 
 if __name__ == "__main__":
   """My main man"""
