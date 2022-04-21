@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # This script comes from HuggingFace examples
 # Orginal location: HuggingFace/examples/pytorch/language-modeling/run_mlm.py
