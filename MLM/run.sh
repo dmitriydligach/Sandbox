@@ -10,12 +10,11 @@ python3 run_mlm.py \
     --per_device_eval_batch_size 32 \
     --do_train \
     --do_eval \
-    --output_dir Training \
+    --output_dir TrainOut \
     --overwrite_output_dir \
     --learning_rate 1e-4 \
     --num_train_epochs 10 \
     --max_steps -1 \
     --log_level passive \
     --logging_dir Logs \
-    --save_steps 5000 \
-    --resume_from_checkpoint None
+    --save_steps 5000
