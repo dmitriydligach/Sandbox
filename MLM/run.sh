@@ -12,9 +12,9 @@ python3 run_mlm.py \
     --do_eval \
     --output_dir TrainOut \
     --overwrite_output_dir \
-    --learning_rate 1e-4 \
-    --num_train_epochs 10 \
+    --learning_rate 5e-5 \
+    --num_train_epochs 50 \
     --max_steps -1 \
     --log_level passive \
     --logging_dir Logs \
-    --save_steps 5000
+    --save_steps 10000
