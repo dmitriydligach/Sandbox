@@ -2,9 +2,10 @@
 
 python3 run_mlm.py \
     --model_type bert \
-    --config_name bert-base-uncased \
+    --config_name config.json \
     --tokenizer_name bert-base-uncased \
     --dataset_name bookcorpus \
+    --max_seq_length 512 \
     --dataset_config_name plain_text \
     --per_device_train_batch_size 32 \
     --per_device_eval_batch_size 32 \
