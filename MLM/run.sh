@@ -10,11 +10,12 @@ python3 run_mlm.py \
     --per_device_eval_batch_size 32 \
     --do_train \
     --do_eval \
-    --output_dir TrainOut \
+    --output_dir Output \
     --overwrite_output_dir \
-    --learning_rate 5e-5 \
-    --num_train_epochs 50 \
+    --learning_rate 5e-05 \
+    --num_train_epochs 25 \
     --max_steps -1 \
     --log_level passive \
     --logging_dir Logs \
-    --save_steps 10000
+    --save_steps 50000 \
+    --disable_tqdm True
