@@ -37,6 +37,7 @@ def main():
       for team_name in team_names:
         if team_name in orig_path:
           team = team_name
+          break
 
       if not team:
         print('team name not found:', orig_path)
@@ -44,7 +45,8 @@ def main():
 
       mod_time = os.path.getmtime(orig_path)
       human_time = datetime.datetime.fromtimestamp(mod_time)
-      date_only = human_time.strftime('%B-%d-%Y')
+      # date_only = human_time.strftime('%B-%d-%Y') # use April, May
+      date_only = human_time.strftime('%m-%d-%Y')   # use 04, 05
 
       # naming convention: <date><team><old name>.<extension>
       new_path = '%s%s-%s-%s.%s' % (new_dir, date_only, team, old_name, extension)
