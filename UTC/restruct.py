@@ -45,11 +45,17 @@ def main():
 
       mod_time = os.path.getmtime(orig_path)
       human_time = datetime.datetime.fromtimestamp(mod_time)
+      month_name = human_time.strftime("%B")
       # date_only = human_time.strftime('%B-%d-%Y') # use April, May
       date_only = human_time.strftime('%m-%d-%Y')   # use 04, 05
 
-      # naming convention: <date><team><old name>.<extension>
-      new_path = '%s%s-%s-%s.%s' % (new_dir, date_only, team, old_name, extension)
+      # create month directory if necessary
+      month_dir_path = os.path.join(new_dir, month_name)
+      if not os.path.isdir(month_dir_path):
+        os.mkdir(month_dir_path)
+
+      # naming convention: <month name>/<date><team><old name>.<extension>
+      new_path = '%s/%s-%s-%s.%s' % (month_dir_path, date_only, team, old_name, extension)
       print(orig_path)
       print(new_path)
       print('=' * 120)
