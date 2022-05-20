@@ -1,6 +1,9 @@
 #! /usr/bin/env python3
 import pandas, string
 
+# Create samples for pretraining transformers from MIMIC notes
+# For now each note is one sample, but will break down further later
+
 mimic_notes_file = '/Users/Dima/Work/Data/MimicIII/Source/NOTEEVENTS.csv'
 out_file = 'notes.txt'
 
