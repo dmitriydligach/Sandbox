@@ -2,9 +2,32 @@
 
 import os
 from pathlib import Path
+
+# old tokenizers API?
 from tokenizers import ByteLevelBPETokenizer
 
+# new tokenizers API?
+from tokenizers import Tokenizer
+from tokenizers.models import BPE
+from tokenizers.trainers import BpeTrainer
+from tokenizers.pre_tokenizers import Whitespace
+
 def train():
+  """Using the latest tokenizers API"""
+
+  base = os.environ['DATA_ROOT']
+  corpus_path = base + 'MimicIII/Encounters/Text/'
+  files = [str(file) for file in Path(corpus_path).glob('*.txt')]
+
+  tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
+  trainer = BpeTrainer(special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
+  tokenizer.pre_tokenizer = Whitespace()
+  tokenizer.train(files, trainer)
+
+  os.mkdir('./Tokenizer')
+  tokenizer.save("Tokenizer/mimic.json")
+
+def train_old():
   """My main man"""
 
   base = os.environ['DATA_ROOT']
@@ -27,7 +50,7 @@ def train():
   os.mkdir('./Tokenizer')
   tokenizer.save_model('./Tokenizer')
 
-def test():
+def test_old():
   """Test trained tokenizer"""
 
   tokenizer = ByteLevelBPETokenizer(
@@ -46,7 +69,15 @@ def test():
   print(encoded.tokens)
   print(encoded.attention_mask)
 
+def test():
+  """Using the new API"""
+
+  tokenizer = Tokenizer.from_file("Tokenizer/mimic.json")
+  output = tokenizer.encode("Hello, y'all! How are you 😁 ?")
+  print(output.tokens)
+  print(output.ids)
+
 if __name__ == "__main__":
 
-  train()
+  # train()
   test()
