@@ -29,7 +29,6 @@ def train():
 
   os.mkdir('./Tokenizer')
   tokenizer.save("Tokenizer/mimic.json")
-  tokenizer.save_pretrained()
 
 def test():
   """Using the new API"""
