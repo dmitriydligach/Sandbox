@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+# from readme:
+# If your dataset is organized with one sample per line, you can
+# use the `--line_by_line` flag (otherwise the script concatenates all
+# texts and then splits them in blocks of the same length).
+
 python3 run_mlm.py \
     --model_type bert \
     --config_name config.json \
