@@ -4,36 +4,42 @@ import os
 from pathlib import Path
 
 from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.trainers import BpeTrainer
+from tokenizers import normalizers
+from tokenizers.models import WordPiece
+from tokenizers.normalizers import Lowercase, NFD, StripAccents
 from tokenizers.pre_tokenizers import Whitespace
+from tokenizers.processors import TemplateProcessing
+from tokenizers.trainers import WordPieceTrainer
 
 from transformers import BertTokenizer
 
-# Todo: update for BERT
-# Todo: tie to "tokenizer_class": "BertTokenizer"
-
 def train():
-  """Using the latest tokenizers API"""
+  """Source: https://huggingface.co/docs/tokenizers/pipeline"""
 
   base = os.environ['DATA_ROOT']
   corpus_path = base + 'MimicIII/Encounters/Text/'
+
+  bert_tokenizer = Tokenizer(WordPiece(unk_token="[UNK]"))
+
+  # input to tokenizer.encode() goes through this pipeline:
+  # normalization, pre-tokenization, model, post-processing
+  bert_tokenizer.normalizer = normalizers.Sequence([NFD(), Lowercase(), StripAccents()])
+  bert_tokenizer.pre_tokenizer = Whitespace()
+  bert_tokenizer.post_processor = TemplateProcessing(
+    single="[CLS] $A [SEP]",
+    pair="[CLS] $A [SEP] $B:1 [SEP]:1",
+    special_tokens=[("[CLS]", 1), ("[SEP]", 2)])
+
   files = [str(file) for file in Path(corpus_path).glob('*.txt')]
-
-  tokenizer = Tokenizer(BPE(unk_token="[UNK]"))
-
-  trainer = BpeTrainer(
-    vocab_size=30000,
-    min_frequency=2,
+  trainer = WordPieceTrainer(
+    vocab_size=30522,
     show_progress=True,
-    special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"])
-
-  tokenizer.pre_tokenizer = Whitespace()
-
-  tokenizer.train(files, trainer)
+    special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
+  )
+  bert_tokenizer.train(files, trainer)
 
   os.mkdir('./Tokenizer')
-  tokenizer.save("Tokenizer/tokenizer.json")
+  bert_tokenizer.save("Tokenizer/tokenizer.json")
 
 def test():
   """Using the new API"""
@@ -51,5 +57,5 @@ def test():
 
 if __name__ == "__main__":
 
-  # train()
+  train()
   test()
