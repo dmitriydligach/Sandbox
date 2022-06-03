@@ -8,6 +8,11 @@ from tokenizers.models import BPE
 from tokenizers.trainers import BpeTrainer
 from tokenizers.pre_tokenizers import Whitespace
 
+from transformers import BertTokenizer
+
+# Todo: update for BERT
+# Todo: tie to "tokenizer_class": "BertTokenizer"
+
 def train():
   """Using the latest tokenizers API"""
 
@@ -28,17 +33,23 @@ def train():
   tokenizer.train(files, trainer)
 
   os.mkdir('./Tokenizer')
-  tokenizer.save("Tokenizer/mimic.json")
+  tokenizer.save("Tokenizer/tokenizer.json")
 
 def test():
   """Using the new API"""
 
-  tokenizer = Tokenizer.from_file("Tokenizer/mimic.json")
+  # load as a generic tokenizer
+  tokenizer = Tokenizer.from_file("Tokenizer/tokenizer.json")
   output = tokenizer.encode("Hello, y'all! How are you 😁 ?")
   print(output.tokens)
   print(output.ids)
 
+  # load as a bert tokenizer
+  tokenizer = BertTokenizer.from_pretrained('Tokenizer/tokenizer.json')
+  output = tokenizer.encode('Patient complains about being nervous')
+  print(output)
+
 if __name__ == "__main__":
 
-  train()
+  # train()
   test()
