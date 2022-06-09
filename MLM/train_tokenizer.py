@@ -13,6 +13,25 @@ from tokenizers.trainers import WordPieceTrainer
 
 from transformers import BertTokenizer
 
+from transformers import AutoTokenizer
+
+def train_from_bert_tokenizer():
+  """Source: https://huggingface.co/course/chapter6/2?fw=pt"""
+
+  base = os.environ['DATA_ROOT']
+  corpus_path = base + 'MimicIII/Encounters/Text/'
+
+  orig_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+
+  files = (str(file) for file in Path(corpus_path).glob('*.txt'))
+  trainer = WordPieceTrainer(
+    vocab_size=30522,
+    show_progress=True,
+    special_tokens=["[UNK]", "[CLS]", "[SEP]", "[PAD]", "[MASK]"]
+  )
+  new_tokenizer = orig_tokenizer.train_new_from_iterator(files, 30522)
+  new_tokenizer.save_pretrained('Tokenizer')
+
 def train():
   """Source: https://huggingface.co/docs/tokenizers/pipeline"""
 
@@ -57,5 +76,6 @@ def test():
 
 if __name__ == "__main__":
 
-  train()
+  train_from_bert_tokenizer()
+  # train()
   test()
