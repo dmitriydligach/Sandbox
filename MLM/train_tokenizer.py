@@ -22,8 +22,8 @@ def train_from_bert_tokenizer():
 
   orig_tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 
-  files = (str(file) for file in Path(corpus_path).glob('*.txt'))
-  new_tokenizer = orig_tokenizer.train_new_from_iterator(files, 30522)
+  txt_gen = (Path(file).read_text() for file in Path(corpus_path).glob('*.txt'))
+  new_tokenizer = orig_tokenizer.train_new_from_iterator(txt_gen, 30522)
   new_tokenizer.save_pretrained('Tokenizer')
 
 def train():
