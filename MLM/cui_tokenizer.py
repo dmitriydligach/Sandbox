@@ -25,6 +25,7 @@ def make_cui_vocab():
   vocab = {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4}
   cui_counts = cui_counter.most_common(vocab_size - n_special_tokens)
   for index, (cui, count) in enumerate(cui_counts):
+    cui = cui[1:] # first character 'C' messes up the tokenizer
     vocab[cui] = index + n_special_tokens
 
   print('vocab size:', len(vocab))
@@ -43,7 +44,7 @@ def write_vocab_file():
   # print(tokenizer_json['model']['vocab']['##1'])
   # tokenizer_json['model']['vocab'] = \
   #   {'[PAD]': 0, '[UNK]': 1, '[CLS]': 2, '[SEP]': 3, '[MASK]': 4,
-  #    'one': 5, 'two': 6, 'three': 7, 'four': 8}
+  #    'C0231683': 5, 'C0302142': 6, 'C0040408': 7, 'C0445403': 8}
 
   tokenizer_json['model']['vocab'] = make_cui_vocab()
 
