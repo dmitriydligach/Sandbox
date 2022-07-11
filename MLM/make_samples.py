@@ -17,7 +17,12 @@ def extract_cuis():
 
   for cui_file in pathlib.Path(mimic_cui_dir).glob('*.txt'):
     cuis_from_file = pathlib.Path(cui_file).read_text()
-    outfile.write(cuis_from_file + '\n')
+
+    # remove first C from each CUI to avoid tokenization problems
+    cui_list = [cui[1:] for cui in cuis_from_file.split()]
+    cui_string = ' '.join(cui_list)
+
+    outfile.write(cui_string + '\n')
 
 def extract_notes():
   """Extract only mimic notes to a csv file"""
