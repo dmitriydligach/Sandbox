@@ -3,7 +3,7 @@
 import os, json, pathlib
 from collections import Counter
 
-old_tokenizer_path = 'OldTokenizer/tokenizer.json'
+old_tokenizer_path = 'Tokenizer/tokenizer.json'
 new_tokenizer_path = 'cui_tokenizer.json'
 
 base = os.environ['DATA_ROOT']
@@ -34,9 +34,11 @@ def make_cui_vocab():
 def write_vocab_file():
   """Reading and writing"""
 
-  # test tokenizer as follows:
+  # to test CUI tokenizer:
+  # from transformers import AutoTokenizer
   # tokenizer = AutoTokenizer.from_pretrained('Tokenizer')
-  # tokenizer.encode('one two three')
+  # tokenizer.encode('0013227 0019080')
+  # should print [2, 16, 20, 3]
 
   with open(old_tokenizer_path, 'r') as old_tokenizer_file:
     tokenizer_json = json.load(old_tokenizer_file)
