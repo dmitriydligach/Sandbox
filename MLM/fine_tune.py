@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import torch, random, phenot_data, os
-from transformers import AutoModelForMaskedLM, TrainingArguments, Trainer
+from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassification
 
 # deterministic determinism
 torch.manual_seed(2022)
@@ -10,14 +10,14 @@ random.seed(2022)
 def main():
   """Fine-tune on phenotyping data"""
 
-  model = AutoModelForMaskedLM.from_pretrained('Output')
+  model = AutoModelForSequenceClassification.from_pretrained('Output')
 
   train_dataset = phenot_data.PhenotypingDataset(train_dir, tok_path)
   test_dataset = phenot_data.PhenotypingDataset(test_dir, tok_path)
 
   training_args = TrainingArguments(
     output_dir='./Results',
-    num_train_epochs=1,
+    num_train_epochs=2,
     per_device_train_batch_size=32,
     per_device_eval_batch_size=32,
     learning_rate=1e-5,

@@ -28,7 +28,17 @@ class PhenotypingDataset(Dataset):
   def __getitem__(self, index):
     """Required by pytorch"""
 
-    return self.tokenizer.encode(self.x[index]), self.y[index]
+    output = self.tokenizer(
+      self.x[index],
+      max_length=512,
+      padding='max_length',
+      truncation=True,
+      return_tensors='pt')
+
+    return dict(
+      input_ids = output.input_ids.squeeze(),
+      attention_mask = output.attention_mask.squeeze(),
+      labels = self.y[index])
 
   def load_examples(self):
     """Convert examples into lists of indices"""
@@ -59,4 +69,4 @@ if __name__ == "__main__":
   tokenizer_path = 'Tokenizer'
 
   dp = PhenotypingDataset(data_dir, tokenizer_path)
-  print(dp)
+  print(dp[111])
