@@ -3,9 +3,21 @@
 import torch, random, phenot_data, os
 from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassification
 
+import numpy as np
+from datasets import load_metric
+metric = load_metric("accuracy")
+
 # deterministic determinism
 torch.manual_seed(2022)
 random.seed(2022)
+
+def compute_metrics(eval_pred):
+  """Metric"""
+
+  logits, labels = eval_pred
+  predictions = np.argmax(logits, axis=-1)
+
+  return metric.compute(predictions=predictions, references=labels)
 
 def main():
   """Fine-tune on phenotyping data"""
@@ -27,9 +39,13 @@ def main():
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=test_dataset)
+    eval_dataset=test_dataset,
+    compute_metrics=compute_metrics)
 
   trainer.train()
+
+  results = trainer.predict(test_dataset)
+  print(results)
 
 if __name__ == "__main__":
   "My kind of street"
