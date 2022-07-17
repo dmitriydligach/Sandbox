@@ -13,8 +13,8 @@ class PhenotypingDataset(Dataset):
     self.x = []
     self.y = []
 
-    self.corpus_path = corpus_path
     self.label2int = {'no':0, 'yes':1}
+    self.corpus_path = corpus_path
     self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
     self.load_examples()
@@ -44,7 +44,6 @@ class PhenotypingDataset(Dataset):
     """Convert examples into lists of indices"""
 
     cui_counts = [] # n cuis in each sample
-
     for d in os.listdir(self.corpus_path):
       label_dir = os.path.join(self.corpus_path, d)
 
