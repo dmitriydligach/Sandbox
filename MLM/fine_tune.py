@@ -26,10 +26,10 @@ def main():
 
   training_args = TrainingArguments(
     output_dir='./Results',
-    num_train_epochs=25,
+    num_train_epochs=10,
     per_device_train_batch_size=48,
     per_device_eval_batch_size=48,
-    learning_rate=1e-5,
+    learning_rate=5e-5,
     load_best_model_at_end=True,
     save_strategy='no',
     evaluation_strategy='no',
@@ -49,6 +49,7 @@ def main():
   print('*** evaluation results ***')
   metrics.report_accuracy(test_dataset.y, labels)
   metrics.report_roc_auc(test_dataset.y, probabilities)
+  metrics.report_pr_auc(test_dataset.y, probabilities)
 
 if __name__ == "__main__":
   "My kind of street"
