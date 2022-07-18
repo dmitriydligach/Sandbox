@@ -2,24 +2,17 @@
 
 import torch, random, phenot_data, os, metrics
 import numpy as np
+from torch.nn import functional as F
+from sklearn.metrics import roc_auc_score
 from transformers import (TrainingArguments,
                           Trainer,
                           AutoModelForSequenceClassification)
 
 from datasets import load_metric
-metric = load_metric("accuracy")
 
 # deterministic determinism
 torch.manual_seed(2022)
 random.seed(2022)
-
-# def compute_metrics(eval_pred):
-#   """Metric"""
-#
-#   logits, labels = eval_pred
-#   predictions = np.argmax(logits, axis=-1)
-#
-#   return metric.compute(predictions=predictions, references=labels)
 
 def main():
   """Fine-tune on phenotyping data"""
@@ -41,20 +34,21 @@ def main():
     save_strategy='no',
     evaluation_strategy='no',
     disable_tqdm=True)
-
   trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=test_dataset)
-
   trainer.train()
 
-  results = trainer.predict(test_dataset)
-  test_predictions = np.argmax(results.predictions, axis=1)
+  predictions = trainer.predict(test_dataset)
+  logits = torch.from_numpy(predictions.predictions)
+  probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
+  labels = np.argmax(logits, axis=1)
 
-  print()
-  metrics.report_accuracy(test_dataset.y, test_predictions)
+  print('*** evaluation results ***')
+  metrics.report_accuracy(test_dataset.y, labels)
+  metrics.report_roc_auc(test_dataset.y, probabilities)
 
 if __name__ == "__main__":
   "My kind of street"
