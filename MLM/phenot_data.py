@@ -56,6 +56,8 @@ class PhenotypingDataset(Dataset):
 
         cui_list = text.split()
         cui_counts.append(len(cui_list))
+
+        # strip 'C' and get first 510 CUIs
         cui_list = [cui[1:] for cui in cui_list[:510]]
         self.x.append(' '.join(cui_list))
 
