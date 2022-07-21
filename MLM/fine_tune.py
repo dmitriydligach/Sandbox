@@ -6,7 +6,8 @@ from torch.nn import functional as F
 
 from transformers import (TrainingArguments,
                           Trainer,
-                          AutoModelForSequenceClassification)
+                          AutoModelForSequenceClassification,
+                          IntervalStrategy)
 
 # deterministic determinism
 torch.manual_seed(2022)
@@ -33,7 +34,7 @@ def train_test_split(dir_path, train_size=0.8):
 
   return train_files, test_files
 
-def eval_on_validation():
+def model_selection():
   """Fine-tune on phenotyping data"""
 
   model = AutoModelForSequenceClassification.from_pretrained(
@@ -42,7 +43,7 @@ def eval_on_validation():
 
   train_files, dev_files = train_test_split(train_dir)
   train_dataset = phenot_data.PhenotypingDataset(train_files, tok_path)
-  test_dataset = phenot_data.PhenotypingDataset(dev_files, tok_path)
+  dev_dataset = phenot_data.PhenotypingDataset(dev_files, tok_path)
 
   training_args = TrainingArguments(
     output_dir='./Results',
@@ -52,27 +53,27 @@ def eval_on_validation():
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
     load_best_model_at_end=True,
-    save_strategy='no',
-    evaluation_strategy='no',
+    save_strategy=IntervalStrategy.EPOCH,
+    evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
   trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=test_dataset)
+    eval_dataset=dev_dataset)
   trainer.train()
 
-  predictions = trainer.predict(test_dataset)
+  predictions = trainer.predict(dev_dataset)
   logits = torch.from_numpy(predictions.predictions)
   probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
   labels = np.argmax(logits, axis=1)
 
   print('\n*** Evaluation results ***\n')
-  metrics.report_accuracy(test_dataset.y, labels)
-  metrics.report_roc_auc(test_dataset.y, probabilities)
-  metrics.report_pr_auc(test_dataset.y, probabilities)
+  metrics.report_accuracy(dev_dataset.y, labels)
+  metrics.report_roc_auc(dev_dataset.y, probabilities)
+  metrics.report_pr_auc(dev_dataset.y, probabilities)
 
-def eval_on_test():
+def evaluation():
   """Fine-tune on phenotyping data"""
 
   # need this to save a fine-tuned model
@@ -95,8 +96,8 @@ def eval_on_test():
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
     load_best_model_at_end=True,
-    save_strategy='no',
-    evaluation_strategy='no',
+    save_strategy=IntervalStrategy.NO,
+    evaluation_strategy=IntervalStrategy.NO,
     disable_tqdm=True)
   trainer = Trainer(
     model=model,
@@ -124,4 +125,5 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  eval_on_validation()
+  # model_selection()
+  evaluation()
