@@ -18,7 +18,7 @@ pretrained_model_path = 'PreTrainedModel/'
 fine_tuned_model_path = 'FineTunedModel/'
 
 # hyperparameters
-n_epochs = 10
+n_epochs = 15
 batch_size = 48
 learning_rate = 5e-5
 
@@ -63,6 +63,12 @@ def model_selection():
     eval_dataset=dev_dataset)
   trainer.train()
 
+  print('\n*** Validation Loss ***\n')
+  for entry in trainer.state.log_history:
+    if 'eval_loss' in entry:
+      print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_loss']))
+  print('best metric:', trainer.state.best_metric)
+
   predictions = trainer.predict(dev_dataset)
   logits = torch.from_numpy(predictions.predictions)
   probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
@@ -91,7 +97,7 @@ def evaluation():
   training_args = TrainingArguments(
     output_dir='./Results',
     overwrite_output_dir=True,
-    num_train_epochs=n_epochs,
+    num_train_epochs=10, # best number of epochs per model selection
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
@@ -125,5 +131,5 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  # model_selection()
-  evaluation()
+  model_selection()
+  # evaluation()
