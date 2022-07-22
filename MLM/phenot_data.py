@@ -20,7 +20,7 @@ class PhenotypingDataset(Dataset):
     elif type(corpus_path_or_files) == list:
       self.file_paths = corpus_path_or_files
     else:
-      print('wrong type!')
+      raise ValueError('Invalid corpus path!')
 
     self.label2int = {'no':0, 'yes':1}
     self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
