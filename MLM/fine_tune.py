@@ -79,7 +79,7 @@ def model_selection():
   metrics.report_roc_auc(dev_dataset.y, probabilities)
   metrics.report_pr_auc(dev_dataset.y, probabilities)
 
-def evaluation():
+def evaluation(best_n_epochs):
   """Fine-tune on phenotyping data"""
 
   # need this to save a fine-tuned model
@@ -97,7 +97,7 @@ def evaluation():
   training_args = TrainingArguments(
     output_dir='./Results',
     overwrite_output_dir=True,
-    num_train_epochs=10, # best number of epochs per model selection
+    num_train_epochs=best_n_epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
@@ -132,4 +132,4 @@ if __name__ == "__main__":
   tok_path = 'Tokenizer'
 
   model_selection()
-  # evaluation()
+  # evaluation(10)
