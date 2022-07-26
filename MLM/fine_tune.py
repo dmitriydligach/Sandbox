@@ -34,6 +34,20 @@ def train_test_split(dir_path, train_size=0.8):
 
   return train_files, test_files
 
+def init_transformer(m: torch.nn.Module):
+  """Jiacheng Zhang's transformer initialization wisdom"""
+
+  for name, params in m.named_parameters():
+    print('initializing:', name)
+
+    if len(params.shape) >= 2:
+      torch.nn.init.xavier_uniform_(params)
+    else:
+      if 'bias' in name:
+        torch.nn.init.zeros_(params)
+      else:
+        torch.nn.init.uniform_(params)
+
 def model_selection():
   """Fine-tune on phenotyping data"""
 
@@ -131,5 +145,5 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  model_selection()
-  # evaluation(10)
+  # model_selection()
+  evaluation(10)
