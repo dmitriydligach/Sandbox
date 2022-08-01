@@ -3,7 +3,7 @@
 import torch, random, phenot_data, os, shutil, pathlib, metrics
 import numpy as np
 from torch.nn import functional as F
-
+from datasets import load_metric
 from transformers import (TrainingArguments,
                           Trainer,
                           AutoModelForSequenceClassification,
@@ -21,6 +21,16 @@ fine_tuned_model_path = 'FineTunedModel/'
 n_epochs = 15
 batch_size = 48
 learning_rate = 5e-5
+
+def compute_metrics(eval_pred):
+  """Compute custom evaluation metric"""
+
+  logits, labels = eval_pred
+  logits = torch.from_numpy(logits)
+  probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
+
+  metric = load_metric('roc_auc')
+  return metric.compute(prediction_scores=probabilities, references=labels)
 
 def train_test_split(dir_path, train_size=0.8):
   """Split files in a directory into train/test"""
@@ -74,13 +84,20 @@ def model_selection():
     model=model,
     args=training_args,
     train_dataset=train_dataset,
-    eval_dataset=dev_dataset)
+    eval_dataset=dev_dataset,
+    compute_metrics=compute_metrics)
   trainer.train()
 
   print('\n*** Validation Loss ***\n')
   for entry in trainer.state.log_history:
     if 'eval_loss' in entry:
       print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_loss']))
+  print('best metric:', trainer.state.best_metric)
+
+  print('\n*** Validation ROC AUC ***\n')
+  for entry in trainer.state.log_history:
+    if 'eval_roc_auc' in entry:
+      print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_roc_auc']))
   print('best metric:', trainer.state.best_metric)
 
   predictions = trainer.predict(dev_dataset)
@@ -145,5 +162,5 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  # model_selection()
-  evaluation(10)
+  model_selection()
+  # evaluation(10)
