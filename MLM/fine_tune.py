@@ -3,7 +3,6 @@
 import torch, random, phenot_data, os, shutil, pathlib, metrics
 import numpy as np
 from torch.nn import functional as F
-from datasets import load_metric
 from transformers import (TrainingArguments,
                           Trainer,
                           AutoModelForSequenceClassification,
@@ -26,11 +25,11 @@ def compute_metrics(eval_pred):
   """Compute custom evaluation metric"""
 
   logits, labels = eval_pred
-  logits = torch.from_numpy(logits)
-  probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
+  logits = torch.from_numpy(logits) # torch tensor for softmax
+  probabilities = F.softmax(logits, dim=1).numpy()[:, 1] # back to numpy
 
-  metric = load_metric('roc_auc')
-  return metric.compute(prediction_scores=probabilities, references=labels)
+  # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
+  return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
 
 def train_test_split(dir_path, train_size=0.8):
   """Split files in a directory into train/test"""
@@ -77,6 +76,7 @@ def model_selection():
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
     load_best_model_at_end=True,
+    metric_for_best_model='eval_pr_auc',
     save_strategy=IntervalStrategy.EPOCH,
     evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
@@ -94,21 +94,11 @@ def model_selection():
       print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_loss']))
   print('best metric:', trainer.state.best_metric)
 
-  print('\n*** Validation ROC AUC ***\n')
+  print('\n*** Validation PR AUC ***\n')
   for entry in trainer.state.log_history:
-    if 'eval_roc_auc' in entry:
-      print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_roc_auc']))
+    if 'eval_pr_auc' in entry:
+      print('epoch: %s, val prauc: %s' % (entry['epoch'], entry['eval_pr_auc']))
   print('best metric:', trainer.state.best_metric)
-
-  predictions = trainer.predict(dev_dataset)
-  logits = torch.from_numpy(predictions.predictions)
-  probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
-  labels = np.argmax(logits, axis=1)
-
-  print('\n*** Evaluation results ***\n')
-  metrics.report_accuracy(dev_dataset.y, labels)
-  metrics.report_roc_auc(dev_dataset.y, probabilities)
-  metrics.report_pr_auc(dev_dataset.y, probabilities)
 
 def evaluation(best_n_epochs):
   """Fine-tune on phenotyping data"""
@@ -132,7 +122,7 @@ def evaluation(best_n_epochs):
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
-    load_best_model_at_end=True,
+    load_best_model_at_end=False, # just run for specified num of epochs
     save_strategy=IntervalStrategy.NO,
     evaluation_strategy=IntervalStrategy.NO,
     disable_tqdm=True)
@@ -143,6 +133,8 @@ def evaluation(best_n_epochs):
     eval_dataset=test_dataset)
   trainer.train()
   trainer.save_model(fine_tuned_model_path)
+
+  # TODO: load trained model rather than rely on trainer
 
   predictions = trainer.predict(test_dataset)
   logits = torch.from_numpy(predictions.predictions)
