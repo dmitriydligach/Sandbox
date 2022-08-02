@@ -14,10 +14,9 @@ random.seed(2022)
 
 # misc constants
 pretrained_model_path = 'PreTrainedModel/'
-fine_tuned_model_path = 'FineTunedModel/'
 
 # hyperparameters
-n_epochs = 15
+model_selection_n_epochs = 15
 batch_size = 48
 learning_rate = 5e-5
 
@@ -71,7 +70,7 @@ def model_selection():
   training_args = TrainingArguments(
     output_dir='./Results',
     overwrite_output_dir=True,
-    num_train_epochs=n_epochs,
+    num_train_epochs=model_selection_n_epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
@@ -88,25 +87,26 @@ def model_selection():
     compute_metrics=compute_metrics)
   trainer.train()
 
+  best_n_epochs = None
   print('\n*** Validation Loss ***\n')
   for entry in trainer.state.log_history:
     if 'eval_loss' in entry:
       print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_loss']))
-  print('best metric:', trainer.state.best_metric)
 
   print('\n*** Validation PR AUC ***\n')
   for entry in trainer.state.log_history:
     if 'eval_pr_auc' in entry:
       print('epoch: %s, val prauc: %s' % (entry['epoch'], entry['eval_pr_auc']))
+      if entry['eval_pr_auc'] == trainer.state.best_metric:
+        best_n_epochs = entry['epoch']
+
   print('best metric:', trainer.state.best_metric)
+  print('best number of epochs:', best_n_epochs)
+
+  return best_n_epochs
 
 def evaluation(best_n_epochs):
   """Fine-tune on phenotyping data"""
-
-  # need this to save a fine-tuned model
-  if os.path.isdir(fine_tuned_model_path):
-    shutil.rmtree(fine_tuned_model_path)
-  os.mkdir(fine_tuned_model_path)
 
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
@@ -129,12 +129,8 @@ def evaluation(best_n_epochs):
   trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset,
-    eval_dataset=test_dataset)
+    train_dataset=train_dataset)
   trainer.train()
-  trainer.save_model(fine_tuned_model_path)
-
-  # TODO: load trained model rather than rely on trainer
 
   predictions = trainer.predict(test_dataset)
   logits = torch.from_numpy(predictions.predictions)
@@ -154,5 +150,6 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  model_selection()
-  # evaluation(10)
+  #  best_n_epochs = model_selection()
+  best_n_epochs = 10
+  evaluation(best_n_epochs)
