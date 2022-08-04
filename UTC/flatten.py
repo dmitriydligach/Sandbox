@@ -4,7 +4,7 @@ import os, datetime, shutil
 
 root_dir = '/Users/Dima/GDrive/UTC/'
 content_dir = 'Top Level/Engagement Team/Ukraine Teams Content/'
-target_dir = 'Top Level/Engagement Team/All Media/'
+target_dir = '/Users/Dima/Temp/All Media/'
 
 old_dir = os.path.join(root_dir, content_dir)
 new_dir = os.path.join(root_dir, target_dir)
@@ -13,7 +13,8 @@ new_dir = os.path.join(root_dir, target_dir)
 media_files = {'jpeg', 'mp4', 'jpg', 'mov'}
 
 # team leaders
-team_names = ['Natalia', 'Kseniia', 'Pavel', 'Andriy', 'Dina', 'Karina', 'Nikolay']
+team_names = ['Natalia', 'Kseniia', 'Pavel', 'Andriy',
+              'Dina', 'Karina', 'Nikolay', 'Timur', 'Olga']
 
 def main():
   """Iterate the hell out of it"""
