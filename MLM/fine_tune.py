@@ -8,10 +8,6 @@ from transformers import (TrainingArguments,
                           AutoModelForSequenceClassification,
                           IntervalStrategy)
 
-# deterministic determinism
-torch.manual_seed(2022)
-random.seed(2022)
-
 # misc constants
 pretrained_model_path = 'PreTrainedModel/'
 
@@ -150,6 +146,16 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  #  best_n_epochs = model_selection()
-  best_n_epochs = 10
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
+  # get the best number of epochs using dev set
+  best_n_epochs = model_selection()
+
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
+  # eval on test set
   evaluation(best_n_epochs)
