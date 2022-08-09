@@ -92,9 +92,11 @@ def model_selection(learning_rate):
 
   for entry in trainer.state.log_history:
     if metric_for_best_model in entry:
+      print('ep: %s, perf: %s' % (entry['epoch'], entry[metric_for_best_model]))
       if entry[metric_for_best_model] == best_metric_value:
         best_n_epochs = entry['epoch']
 
+  print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
   return best_n_epochs, best_metric_value
 
 def eval_on_test(best_n_epochs, best_learning_rate):
