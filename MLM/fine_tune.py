@@ -55,6 +55,10 @@ def init_transformer(m: torch.nn.Module):
 def model_selection():
   """Fine-tune on phenotyping data"""
 
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
     num_labels=2)
@@ -104,6 +108,10 @@ def model_selection():
 def evaluation(best_n_epochs):
   """Fine-tune on phenotyping data"""
 
+  # deterministic determinism
+  torch.manual_seed(2022)
+  random.seed(2022)
+
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
     num_labels=2)
@@ -146,16 +154,8 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  # deterministic determinism
-  torch.manual_seed(2022)
-  random.seed(2022)
-
   # get the best number of epochs using dev set
   best_n_epochs = model_selection()
-
-  # deterministic determinism
-  torch.manual_seed(2022)
-  random.seed(2022)
 
   # eval on test set
   evaluation(best_n_epochs)
