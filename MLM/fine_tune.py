@@ -10,11 +10,11 @@ from transformers import (TrainingArguments,
 
 # misc constants
 pretrained_model_path = 'PreTrainedModel/'
+metric_for_best_model = 'eval_pr_auc'
 
 # hyperparameters
 model_selection_n_epochs = 15
 batch_size = 48
-learning_rate = 5e-5
 
 def compute_metrics(eval_pred):
   """Compute custom evaluation metric"""
@@ -52,7 +52,7 @@ def init_transformer(m: torch.nn.Module):
       else:
         torch.nn.init.uniform_(params)
 
-def model_selection():
+def model_selection(learning_rate):
   """Fine-tune on phenotyping data"""
 
   # deterministic determinism
@@ -75,7 +75,7 @@ def model_selection():
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
     load_best_model_at_end=True,
-    metric_for_best_model='eval_pr_auc',
+    metric_for_best_model=metric_for_best_model,
     save_strategy=IntervalStrategy.EPOCH,
     evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
@@ -88,16 +88,13 @@ def model_selection():
   trainer.train()
 
   best_n_epochs = None
-  print('\n*** Validation Loss ***\n')
-  for entry in trainer.state.log_history:
-    if 'eval_loss' in entry:
-      print('epoch: %s, val loss: %s' % (entry['epoch'], entry['eval_loss']))
+  print('\n*** Validation performance ***\n')
 
-  print('\n*** Validation PR AUC ***\n')
   for entry in trainer.state.log_history:
-    if 'eval_pr_auc' in entry:
-      print('epoch: %s, val prauc: %s' % (entry['epoch'], entry['eval_pr_auc']))
-      if entry['eval_pr_auc'] == trainer.state.best_metric:
+    if metric_for_best_model in entry:
+      print('epoch: %s, %s: %s' %
+            (entry['epoch'], metric_for_best_model, entry[metric_for_best_model]))
+      if entry[metric_for_best_model] == trainer.state.best_metric:
         best_n_epochs = entry['epoch']
 
   print('best metric:', trainer.state.best_metric)
@@ -105,7 +102,7 @@ def model_selection():
 
   return best_n_epochs
 
-def evaluation(best_n_epochs):
+def evaluation(best_n_epochs, best_learning_rate):
   """Fine-tune on phenotyping data"""
 
   # deterministic determinism
@@ -125,7 +122,7 @@ def evaluation(best_n_epochs):
     num_train_epochs=best_n_epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    learning_rate=learning_rate,
+    learning_rate=best_learning_rate,
     load_best_model_at_end=False, # just run for specified num of epochs
     save_strategy=IntervalStrategy.NO,
     evaluation_strategy=IntervalStrategy.NO,
@@ -154,8 +151,11 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
+  # eventually search for best lr too
+  lr=5e-5
+
   # get the best number of epochs using dev set
-  best_n_epochs = model_selection()
+  best_n_epochs = model_selection(learning_rate=lr)
 
   # eval on test set
-  evaluation(best_n_epochs)
+  evaluation(best_n_epochs, best_learning_rate=lr)
