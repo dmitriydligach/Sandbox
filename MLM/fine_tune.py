@@ -88,22 +88,17 @@ def model_selection(learning_rate):
   trainer.train()
 
   best_n_epochs = None
-  print('\n*** Validation performance ***\n')
+  best_metric_value = trainer.state.best_metric
 
   for entry in trainer.state.log_history:
     if metric_for_best_model in entry:
-      print('epoch: %s, %s: %s' %
-            (entry['epoch'], metric_for_best_model, entry[metric_for_best_model]))
-      if entry[metric_for_best_model] == trainer.state.best_metric:
+      if entry[metric_for_best_model] == best_metric_value:
         best_n_epochs = entry['epoch']
 
-  print('best metric:', trainer.state.best_metric)
-  print('best number of epochs:', best_n_epochs)
+  return best_n_epochs, best_metric_value
 
-  return best_n_epochs
-
-def evaluation(best_n_epochs, best_learning_rate):
-  """Fine-tune on phenotyping data"""
+def eval_on_test(best_n_epochs, best_learning_rate):
+  """Fine-tune and evaluate on test set"""
 
   # deterministic determinism
   torch.manual_seed(2022)
@@ -151,11 +146,6 @@ if __name__ == "__main__":
   test_dir = os.path.join(base, 'Opioids1k/Test/')
   tok_path = 'Tokenizer'
 
-  # eventually search for best lr too
-  lr=5e-5
-
-  # get the best number of epochs using dev set
-  best_n_epochs = model_selection(learning_rate=lr)
-
-  # eval on test set
-  evaluation(best_n_epochs, best_learning_rate=lr)
+  lr = 5e-5
+  best_n_epochs, best_metric_value = model_selection(learning_rate=lr)
+  eval_on_test(best_n_epochs=best_n_epochs, best_learning_rate=lr)
