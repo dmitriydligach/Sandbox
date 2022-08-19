@@ -6,4 +6,4 @@
 - remove Tokenizer/vocab.txt just in case
 - run make_samples.py to make training data (notes.txt)
 - replace tokenizer_name in run.sh with Tokenizer
-- set batch size to 28 to train on 6 GPUs
+
