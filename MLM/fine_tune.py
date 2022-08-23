@@ -11,32 +11,17 @@ from transformers import (TrainingArguments,
 # misc constants
 pretrained_model_path = 'PreTrainedModel/'
 metric_for_best_model = 'eval_pr_auc'
+tokenizer_path = './CuiTokenizer'
 
 # hyperparameters
 model_selection_n_epochs = 15
 batch_size = 48
 
-def compute_metrics(eval_pred):
-  """Compute custom evaluation metric"""
-
-  logits, labels = eval_pred
-  logits = torch.from_numpy(logits) # torch tensor for softmax
-  probabilities = F.softmax(logits, dim=1).numpy()[:, 1] # back to numpy
-
-  # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
-  return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
-
-def train_test_split(dir_path, train_size=0.8):
-  """Split files in a directory into train/test"""
-
-  all_files = list(pathlib.Path(dir_path).glob('*/*.txt'))
-  n_train_files = int(len(all_files) *  train_size)
-
-  random.shuffle(all_files)
-  train_files = all_files[:n_train_files]
-  test_files = all_files[n_train_files:]
-
-  return train_files, test_files
+# datasets (name, train path, test path) tuples
+eval_datasets = [('Alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
+                 ('ARDS', 'Ards/Train/', 'Ards/Test/'),
+                ('Injury', 'Injury/Train/', 'Injury/Test/'),
+                ('Opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
 
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
@@ -52,7 +37,29 @@ def init_transformer(m: torch.nn.Module):
       else:
         torch.nn.init.uniform_(params)
 
-def model_selection(learning_rate):
+def train_test_split(dir_path, train_size=0.8):
+  """Split files in a directory into train/test"""
+
+  all_files = list(pathlib.Path(dir_path).glob('*/*.txt'))
+  n_train_files = int(len(all_files) *  train_size)
+
+  random.shuffle(all_files)
+  train_files = all_files[:n_train_files]
+  test_files = all_files[n_train_files:]
+
+  return train_files, test_files
+
+def compute_metrics(eval_pred):
+  """Compute custom evaluation metric"""
+
+  logits, labels = eval_pred
+  logits = torch.from_numpy(logits) # torch tensor for softmax
+  probabilities = F.softmax(logits, dim=1).numpy()[:, 1] # back to numpy
+
+  # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
+  return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
+
+def model_selection(dataset_name, train_dir, learning_rate):
   """Fine-tune on phenotyping data"""
 
   # deterministic determinism
@@ -64,8 +71,8 @@ def model_selection(learning_rate):
     num_labels=2)
 
   train_files, dev_files = train_test_split(train_dir)
-  train_dataset = phenot_data.PhenotypingDataset(train_files, tok_path)
-  dev_dataset = phenot_data.PhenotypingDataset(dev_files, tok_path)
+  train_dataset = phenot_data.PhenotypingDataset(train_files, tokenizer_path)
+  dev_dataset = phenot_data.PhenotypingDataset(dev_files, tokenizer_path)
 
   training_args = TrainingArguments(
     output_dir='./Results',
@@ -74,9 +81,9 @@ def model_selection(learning_rate):
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
     learning_rate=learning_rate,
-    load_best_model_at_end=True,
+    load_best_model_at_end=True,                 # TODO: change to false
     metric_for_best_model=metric_for_best_model,
-    save_strategy=IntervalStrategy.EPOCH,
+    save_strategy=IntervalStrategy.EPOCH,        # TODO: change to no
     evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
   trainer = Trainer(
@@ -90,6 +97,7 @@ def model_selection(learning_rate):
   best_n_epochs = None
   best_metric_value = trainer.state.best_metric
 
+  print('########## %s ##########' % dataset_name)
   for entry in trainer.state.log_history:
     if metric_for_best_model in entry:
       print('ep: %s, perf: %s' % (entry['epoch'], entry[metric_for_best_model]))
@@ -99,7 +107,7 @@ def model_selection(learning_rate):
   print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
   return best_n_epochs, best_metric_value
 
-def eval_on_test(best_n_epochs, best_learning_rate):
+def eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs, best_learning_rate):
   """Fine-tune and evaluate on test set"""
 
   # deterministic determinism
@@ -110,8 +118,8 @@ def eval_on_test(best_n_epochs, best_learning_rate):
     pretrained_model_path,
     num_labels=2)
 
-  train_dataset = phenot_data.PhenotypingDataset(train_dir, tok_path)
-  test_dataset = phenot_data.PhenotypingDataset(test_dir, tok_path)
+  train_dataset = phenot_data.PhenotypingDataset(train_dir, tokenizer_path)
+  test_dataset = phenot_data.PhenotypingDataset(test_dir, tokenizer_path)
 
   training_args = TrainingArguments(
     output_dir='./Results',
@@ -135,19 +143,23 @@ def eval_on_test(best_n_epochs, best_learning_rate):
   probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
   labels = np.argmax(logits, axis=1)
 
-  print('\n*** Evaluation results ***\n')
+  print('\n********** %s evaluation results **********\n' % dataset_name)
   metrics.report_accuracy(test_dataset.y, labels)
   metrics.report_roc_auc(test_dataset.y, probabilities)
   metrics.report_pr_auc(test_dataset.y, probabilities)
 
+def main():
+  """Evaluate on a few datasets"""
+
+  lr = 5e-5
+  base_path = os.environ['DATA_ROOT']
+  for dataset_name, train_dir, test_dir in eval_datasets:
+    train_dir = os.path.join(base_path, train_dir)
+    test_dir = os.path.join(base_path, test_dir)
+    best_n_epochs, best_metric_value = model_selection(dataset_name, train_dir, learning_rate=lr)
+    eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs=best_n_epochs, best_learning_rate=lr)
+
 if __name__ == "__main__":
   "My kind of street"
 
-  base = os.environ['DATA_ROOT']
-  train_dir = os.path.join(base, 'Opioids1k/Train/')
-  test_dir = os.path.join(base, 'Opioids1k/Test/')
-  tok_path = 'Tokenizer'
-
-  lr = 5e-5
-  best_n_epochs, best_metric_value = model_selection(learning_rate=lr)
-  eval_on_test(best_n_epochs=best_n_epochs, best_learning_rate=lr)
+  main()
