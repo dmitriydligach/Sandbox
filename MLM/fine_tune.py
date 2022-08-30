@@ -12,16 +12,18 @@ from transformers import (TrainingArguments,
 pretrained_model_path = 'PreTrainedModel/'
 metric_for_best_model = 'eval_pr_auc'
 tokenizer_path = './CuiTokenizer'
+results_file = './results.txt'
 
 # hyperparameters
 model_selection_n_epochs = 15
 batch_size = 48
+lr = 5e-5
 
 # datasets (name, train path, test path) tuples
-eval_datasets = [('Alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
-                 ('ARDS', 'Ards/Train/', 'Ards/Test/'),
-                ('Injury', 'Injury/Train/', 'Injury/Test/'),
-                ('Opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
+eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
+                 ('ards', 'Ards/Train/', 'Ards/Test/'),
+                ('injury', 'Injury/Train/', 'Injury/Test/'),
+                ('opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
 
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
@@ -107,7 +109,12 @@ def model_selection(dataset_name, train_dir, learning_rate):
   print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
   return best_n_epochs, best_metric_value
 
-def eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs, best_learning_rate):
+def eval_on_test(
+ dataset_name,
+ train_dir,
+ test_dir,
+ optimal_n_epochs,
+ optimal_learning_rate):
   """Fine-tune and evaluate on test set"""
 
   # deterministic determinism
@@ -124,10 +131,10 @@ def eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs, best_learning
   training_args = TrainingArguments(
     output_dir='./Results',
     overwrite_output_dir=True,
-    num_train_epochs=best_n_epochs,
+    num_train_epochs=optimal_n_epochs,
     per_device_train_batch_size=batch_size,
     per_device_eval_batch_size=batch_size,
-    learning_rate=best_learning_rate,
+    learning_rate=optimal_learning_rate,
     load_best_model_at_end=False, # just run for specified num of epochs
     save_strategy=IntervalStrategy.NO,
     evaluation_strategy=IntervalStrategy.NO,
@@ -143,21 +150,31 @@ def eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs, best_learning
   probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
   labels = np.argmax(logits, axis=1)
 
-  print('\n********** %s evaluation results **********\n' % dataset_name)
-  metrics.report_accuracy(test_dataset.y, labels)
-  metrics.report_roc_auc(test_dataset.y, probabilities)
-  metrics.report_pr_auc(test_dataset.y, probabilities)
+  out_file = open(results_file, 'a')
+  pr_auc = metrics.report_pr_auc(test_dataset.y, probabilities)
+  out_file.write('dataset: %s, prauc: %s\n' % (dataset_name, pr_auc))
+  out_file.close()
 
 def main():
   """Evaluate on a few datasets"""
 
-  lr = 5e-5
   base_path = os.environ['DATA_ROOT']
+
   for dataset_name, train_dir, test_dir in eval_datasets:
     train_dir = os.path.join(base_path, train_dir)
     test_dir = os.path.join(base_path, test_dir)
-    best_n_epochs, best_metric_value = model_selection(dataset_name, train_dir, learning_rate=lr)
-    eval_on_test(dataset_name, train_dir, test_dir, best_n_epochs=best_n_epochs, best_learning_rate=lr)
+
+    best_n_epochs, best_metric_value = model_selection(
+      dataset_name,
+      train_dir,
+      learning_rate=lr)
+
+    eval_on_test(
+      dataset_name,
+      train_dir,
+      test_dir,
+      optimal_n_epochs=best_n_epochs,
+      optimal_learning_rate=lr)
 
 if __name__ == "__main__":
   "My kind of street"

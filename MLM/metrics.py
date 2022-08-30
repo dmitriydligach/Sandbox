@@ -20,24 +20,28 @@ def report_f1(y_test, predictions, average):
 
   f1 = f1_score(y_test, predictions, average=average)
   print("f1-%s: %.3f" % (average, f1))
+  return f1
 
 def report_accuracy(y_test, predictions):
   """Accuracy score"""
 
   accuracy = accuracy_score(y_test, predictions)
   print('accuracy: %.3f' % accuracy)
+  return accuracy
 
 def report_roc_auc(y_test, probs):
   """ROC and PR AUC scores"""
 
   roc_auc = roc_auc_score(y_test, probs)
   print('roc auc: %.3f' % roc_auc)
+  return roc_auc
 
 def report_pr_auc(y_test, probs):
     """PR AUC; x-axis should be recall, y-axis precision"""
 
     pr_auc = pr_auc_score(y_test, probs)
     print('pr auc: %.3f' % pr_auc)
+    return pr_auc
 
 def report_ci(y_test, probs, metric, n_samples=10000):
   """95% confidence intervals on a metric"""
