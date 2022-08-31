@@ -8,7 +8,7 @@
 python3 run_mlm.py \
     --model_type bert \
     --config_name config.json \
-    --tokenizer_name Tokenizer \
+    --tokenizer_name CuiTokenizer \
     --train_file notes.txt \
     --max_seq_length 512 \
     --per_device_train_batch_size 28 \
@@ -18,10 +18,10 @@ python3 run_mlm.py \
     --output_dir Output \
     --overwrite_output_dir \
     --learning_rate 5e-05 \
-    --num_train_epochs 100 \
+    --num_train_epochs 500 \
     --max_steps -1 \
     --log_level passive \
-    --logging_dir Logs \
+    --logging_dir TensorboardLogs \
     --save_steps 50000 \
     --disable_tqdm True \
     --logging_strategy epoch \

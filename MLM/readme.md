@@ -5,5 +5,5 @@
 - copy cui_tokenizer.json to Tokenizer/tokenizer.json
 - remove Tokenizer/vocab.txt just in case
 - run make_samples.py to make training data (notes.txt)
-- replace tokenizer_name in run.sh with Tokenizer
-
+- ensure tokenizer dir is called CuiTokenizer
+- replace tokenizer_name in run.sh with CuiTokenizer
