@@ -9,7 +9,7 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = 'PreTrainedModel/'
+pretrained_model_path = '/home/dima/Backup/CuiBert07132022/'
 metric_for_best_model = 'eval_pr_auc'
 tokenizer_path = './CuiTokenizer'
 results_file = './results.txt'
@@ -22,8 +22,8 @@ lr = 5e-5
 # datasets (name, train path, test path) tuples
 eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
                  ('ards', 'Ards/Train/', 'Ards/Test/'),
-                ('injury', 'Injury/Train/', 'Injury/Test/'),
-                ('opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
+                 ('injury', 'Injury/Train/', 'Injury/Test/'),
+                 ('opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
 
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
@@ -152,7 +152,8 @@ def eval_on_test(
 
   out_file = open(results_file, 'a')
   pr_auc = metrics.report_pr_auc(test_dataset.y, probabilities)
-  out_file.write('dataset: %s, prauc: %s\n' % (dataset_name, pr_auc))
+  out_file.write('model: %s, dataset: %s, prauc: %s\n' % (
+    pretrained_model_path.split('/')[-2], dataset_name, pr_auc))
   out_file.close()
 
 def main():
