@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import os, pathlib
+import os, pathlib, numpy
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
 class PhenotypingDataset(Dataset):
   """Read data from files and make inputs/outputs"""
 
-  def __init__(self, corpus_path_or_files, tokenizer_path):
+  def __init__(self, corpus_path_or_files, tokenizer_path, print_stats=False):
     """Load tokenizer and save corpus path"""
 
     self.x = []
@@ -25,7 +25,7 @@ class PhenotypingDataset(Dataset):
     self.label2int = {'no':0, 'yes':1}
     self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
 
-    self.load_examples()
+    self.load_examples(print_stats=print_stats)
 
   def __len__(self):
     """Requried by pytorch"""
@@ -48,8 +48,8 @@ class PhenotypingDataset(Dataset):
       attention_mask = output.attention_mask.squeeze(),
       labels = self.y[index])
 
-  def load_examples(self):
-    """Convert examples into lists of indices"""
+  def load_examples(self, print_stats=False):
+    """Convert examples to lists of indices and get token count stats"""
 
     cui_counts = [] # n cuis in each sample
 
@@ -66,13 +66,29 @@ class PhenotypingDataset(Dataset):
       cui_list = [cui[1:] for cui in cui_list[:510]]
       self.x.append(' '.join(cui_list))
 
-    print('average number of cuis:', sum(cui_counts) / len(cui_counts))
+    if print_stats:
+      print('mean num of cuis:', numpy.mean(cui_counts))
+      print('median num of cuis:', numpy.median(cui_counts))
+      print('min num of cuis:', numpy.min(cui_counts))
+      print('max num of cuis:', numpy.max(cui_counts))
+      print('standard deviation:', numpy.std(cui_counts))
+
+def analyze_datasets():
+  """Print stats about phenotyping datasets"""
+
+  base = os.environ['DATA_ROOT']
+  tokenizer_path = 'CuiTokenizer'
+
+  eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
+                   ('ards', 'Ards/Train/', 'Ards/Test/'),
+                   ('injury', 'Injury/Train/', 'Injury/Test/'),
+                   ('opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
+
+  for name, train, test in eval_datasets:
+    print('\n##### %s #####' % name)
+    data_dir = os.path.join(base, train)
+    dp = PhenotypingDataset(data_dir, tokenizer_path, print_stats=True)
 
 if __name__ == "__main__":
 
-  base = os.environ['DATA_ROOT']
-  data_dir = os.path.join(base, 'Opioids1k/Train/')
-  tokenizer_path = 'Tokenizer'
-
-  dp = PhenotypingDataset(data_dir, tokenizer_path)
-  print(dp[111])
+  analyze_datasets()
