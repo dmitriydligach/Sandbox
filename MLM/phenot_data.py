@@ -67,6 +67,7 @@ class PhenotypingDataset(Dataset):
       self.x.append(' '.join(cui_list))
 
     if print_stats:
+      print('num of training examples:', len(cui_counts))
       print('mean num of cuis:', numpy.mean(cui_counts))
       print('median num of cuis:', numpy.median(cui_counts))
       print('min num of cuis:', numpy.min(cui_counts))

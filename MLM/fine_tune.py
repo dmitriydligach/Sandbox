@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import torch, random, phenot_data, os, shutil, pathlib, metrics
+import torch, random, phenot_data, os, pathlib, metrics
 import numpy as np
 from torch.nn import functional as F
 from transformers import (TrainingArguments,
@@ -9,17 +9,19 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = '/home/dima/Backup/CuiBert07132022/'
+pretrained_model_path = '/home/dima/Models/CuiBert20Epochs/'
 metric_for_best_model = 'eval_pr_auc'
 tokenizer_path = './CuiTokenizer'
 results_file = './results.txt'
 
 # hyperparameters
 model_selection_n_epochs = 15
-batch_size = 48
-lr = 5e-5
+batch_size = 16
 
-# datasets (name, train path, test path) tuples
+# search
+learning_rates = [2e-5, 5e-5, 7e-5]
+
+# datasets
 eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
                  ('ards', 'Ards/Train/', 'Ards/Test/'),
                  ('injury', 'Injury/Train/', 'Injury/Test/'),
@@ -61,8 +63,29 @@ def compute_metrics(eval_pred):
   # https://stackoverflow.com/questions/69087044/early-stopping-in-bert-trainer-instances
   return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
 
-def model_selection(dataset_name, train_dir, learning_rate):
-  """Fine-tune on phenotyping data"""
+def grid_search(dataset_name, train_dir):
+  """Try different learning rates (for now) and return the best"""
+
+  # key: best performance, value: [best num of epochs, learning rate]
+  search_results = {}
+
+  for learning_rate in learning_rates:
+    best_n_epochs, best_metric_value = eval_on_dev_set(
+      dataset_name,
+      train_dir,
+      learning_rate)
+    search_results[best_metric_value] = [best_n_epochs, learning_rate]
+
+  print('search results:', dataset_name, search_results)
+  best_performance = max(search_results.keys())
+  print('best performance:', best_performance)
+  optimal_n_epochs, optimal_learning_rate = search_results[best_performance]
+  print('optimal epochs and lr:', optimal_n_epochs, optimal_learning_rate)
+
+  return optimal_n_epochs, optimal_learning_rate
+
+def eval_on_dev_set(dataset_name, train_dir, learning_rate):
+  """Make a dev set, fine-tune, and evaluate on it"""
 
   # deterministic determinism
   torch.manual_seed(2022)
@@ -109,7 +132,7 @@ def model_selection(dataset_name, train_dir, learning_rate):
   print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
   return best_n_epochs, best_metric_value
 
-def eval_on_test(
+def eval_on_test_set(
  dataset_name,
  train_dir,
  test_dir,
@@ -165,17 +188,17 @@ def main():
     train_dir = os.path.join(base_path, train_dir)
     test_dir = os.path.join(base_path, test_dir)
 
-    best_n_epochs, best_metric_value = model_selection(
+    optimal_n_epochs, optimal_learning_rate = grid_search(
       dataset_name,
-      train_dir,
-      learning_rate=lr)
+      train_dir)
 
-    eval_on_test(
+    print('evaluating on test set:', dataset_name, optimal_n_epochs, optimal_learning_rate)
+    eval_on_test_set(
       dataset_name,
       train_dir,
       test_dir,
-      optimal_n_epochs=best_n_epochs,
-      optimal_learning_rate=lr)
+      optimal_n_epochs=optimal_n_epochs,
+      optimal_learning_rate=optimal_learning_rate)
 
 if __name__ == "__main__":
   "My kind of street"
