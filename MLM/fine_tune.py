@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-import torch, random, phenot_data, os, pathlib, metrics
-import numpy as np
+import torch, random, phenot_data, os, pathlib, metrics, shutil
 from torch.nn import functional as F
 from transformers import (TrainingArguments,
                           Trainer,
@@ -10,16 +9,17 @@ from transformers import (TrainingArguments,
 
 # misc constants
 pretrained_model_path = '/home/dima/Models/CuiBert20Epochs/'
+output_dir = './Results'
 metric_for_best_model = 'eval_pr_auc'
 tokenizer_path = './CuiTokenizer'
 results_file = './results.txt'
 
 # hyperparameters
 model_selection_n_epochs = 15
-batch_size = 16
+batch_size = 48
 
-# search
-learning_rates = [2e-5, 5e-5, 7e-5]
+# search over these learning rates
+learning_rates = [1e-5, 2e-5, 3e-5, 4e-5, 5e-5, 6e-5, 7e-5, 8e-5, 9e-5]
 
 # datasets
 eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
@@ -66,7 +66,7 @@ def compute_metrics(eval_pred):
 def grid_search(dataset_name, train_dir):
   """Try different learning rates (for now) and return the best"""
 
-  # key: best performance, value: [best num of epochs, learning rate]
+  # key: performance, value: [best num of epochs, learning rate]
   search_results = {}
 
   for learning_rate in learning_rates:
@@ -100,7 +100,7 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate):
   dev_dataset = phenot_data.PhenotypingDataset(dev_files, tokenizer_path)
 
   training_args = TrainingArguments(
-    output_dir='./Results',
+    output_dir=output_dir,
     overwrite_output_dir=True,
     num_train_epochs=model_selection_n_epochs,
     per_device_train_batch_size=batch_size,
@@ -128,8 +128,11 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate):
       print('ep: %s, perf: %s' % (entry['epoch'], entry[metric_for_best_model]))
       if entry[metric_for_best_model] == best_metric_value:
         best_n_epochs = entry['epoch']
-
   print('best epochs: %s, best performance: %s' % (best_n_epochs, best_metric_value))
+
+  # remove intermediate checkpoint dir to save space
+  shutil.rmtree(output_dir)
+
   return best_n_epochs, best_metric_value
 
 def eval_on_test_set(
@@ -152,7 +155,7 @@ def eval_on_test_set(
   test_dataset = phenot_data.PhenotypingDataset(test_dir, tokenizer_path)
 
   training_args = TrainingArguments(
-    output_dir='./Results',
+    output_dir=output_dir,
     overwrite_output_dir=True,
     num_train_epochs=optimal_n_epochs,
     per_device_train_batch_size=batch_size,
@@ -171,7 +174,10 @@ def eval_on_test_set(
   predictions = trainer.predict(test_dataset)
   logits = torch.from_numpy(predictions.predictions)
   probabilities = F.softmax(logits, dim=1).numpy()[:, 1]
-  labels = np.argmax(logits, axis=1)
+  # labels = np.argmax(logits, axis=1)
+
+  # remove intermediate checkpoint dir to save space
+  shutil.rmtree(output_dir)
 
   out_file = open(results_file, 'a')
   pr_auc = metrics.report_pr_auc(test_dataset.y, probabilities)
@@ -199,6 +205,8 @@ def main():
       test_dir,
       optimal_n_epochs=optimal_n_epochs,
       optimal_learning_rate=optimal_learning_rate)
+
+  # remove Results directory
 
 if __name__ == "__main__":
   "My kind of street"

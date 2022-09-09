@@ -4,6 +4,9 @@ import os, pathlib, numpy
 from torch.utils.data import Dataset
 from transformers import AutoTokenizer
 
+# maximum sequence length
+max_length = 512
+
 class PhenotypingDataset(Dataset):
   """Read data from files and make inputs/outputs"""
 
@@ -38,7 +41,7 @@ class PhenotypingDataset(Dataset):
 
     output = self.tokenizer(
       self.x[index],
-      max_length=512,
+      max_length=max_length,
       padding='max_length',
       truncation=True,
       return_tensors='pt')
@@ -62,8 +65,8 @@ class PhenotypingDataset(Dataset):
       cui_list = text.split()
       cui_counts.append(len(cui_list))
 
-      # strip 'C' and get the first 510 CUIs
-      cui_list = [cui[1:] for cui in cui_list[:510]]
+      # strip 'C' and get the first max_length-2 (e.g. 510) CUIs
+      cui_list = [cui[1:] for cui in cui_list[:max_length-2]]
       self.x.append(' '.join(cui_list))
 
     if print_stats:
