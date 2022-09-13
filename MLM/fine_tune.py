@@ -15,11 +15,12 @@ tokenizer_path = './CuiTokenizer'
 results_file = './results.txt'
 
 # hyperparameters
-model_selection_n_epochs = 15
+model_selection_n_epochs = 25
 batch_size = 48
 
-# search over these learning rates
-learning_rates = [1e-5, 2e-5, 3e-5, 4e-5, 5e-5, 6e-5, 7e-5, 8e-5, 9e-5]
+# search over these hyperparameters
+classifier_dropouts = [0.1, 0.25, 0.5]
+learning_rates = [2e-5, 3e-5, 5e-5, 7e-5, 8e-5]
 
 # datasets
 eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
@@ -64,27 +65,33 @@ def compute_metrics(eval_pred):
   return {'pr_auc': metrics.pr_auc_score(y_test=labels, probs=probabilities)}
 
 def grid_search(dataset_name, train_dir):
-  """Try different learning rates (for now) and return the best"""
+  """Try different hyperparameter combinations and return the best"""
 
   # key: performance, value: [best num of epochs, learning rate]
   search_results = {}
 
-  for learning_rate in learning_rates:
-    best_n_epochs, best_metric_value = eval_on_dev_set(
-      dataset_name,
-      train_dir,
-      learning_rate)
-    search_results[best_metric_value] = [best_n_epochs, learning_rate]
+  for classifier_dropout in classifier_dropouts:
+    for learning_rate in learning_rates:
+      print('evaluating lr and dropout:', classifier_dropout, learning_rate)
+      best_n_epochs, best_metric_value = eval_on_dev_set(
+        dataset_name,
+        train_dir,
+        learning_rate,
+        classifier_dropout)
+      search_results[best_metric_value] = \
+        [best_n_epochs, learning_rate, classifier_dropout]
 
   print('search results:', dataset_name, search_results)
   best_performance = max(search_results.keys())
   print('best performance:', best_performance)
-  optimal_n_epochs, optimal_learning_rate = search_results[best_performance]
-  print('optimal epochs and lr:', optimal_n_epochs, optimal_learning_rate)
+  optimal_n_epochs, optimal_learning_rate, optimal_classifier_dropout = \
+    search_results[best_performance]
+  print('optimal epochs, lr, dropout:',
+    optimal_n_epochs, optimal_learning_rate, optimal_classifier_dropout)
 
-  return optimal_n_epochs, optimal_learning_rate
+  return optimal_n_epochs, optimal_learning_rate, optimal_classifier_dropout
 
-def eval_on_dev_set(dataset_name, train_dir, learning_rate):
+def eval_on_dev_set(dataset_name, train_dir, learning_rate, classifier_dropout):
   """Make a dev set, fine-tune, and evaluate on it"""
 
   # deterministic determinism
@@ -94,6 +101,7 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate):
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
     num_labels=2)
+  model.dropout = torch.nn.modules.dropout.Dropout(classifier_dropout)
 
   train_files, dev_files = train_test_split(train_dir)
   train_dataset = phenot_data.PhenotypingDataset(train_files, tokenizer_path)
@@ -136,11 +144,12 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate):
   return best_n_epochs, best_metric_value
 
 def eval_on_test_set(
- dataset_name,
- train_dir,
- test_dir,
- optimal_n_epochs,
- optimal_learning_rate):
+  dataset_name,
+  train_dir,
+  test_dir,
+  optimal_n_epochs,
+  optimal_learning_rate,
+  optimal_classifier_dropout):
   """Fine-tune and evaluate on test set"""
 
   # deterministic determinism
@@ -150,6 +159,7 @@ def eval_on_test_set(
   model = AutoModelForSequenceClassification.from_pretrained(
     pretrained_model_path,
     num_labels=2)
+  model.dropout = torch.nn.modules.dropout.Dropout(optimal_classifier_dropout)
 
   train_dataset = phenot_data.PhenotypingDataset(train_dir, tokenizer_path)
   test_dataset = phenot_data.PhenotypingDataset(test_dir, tokenizer_path)
@@ -194,19 +204,16 @@ def main():
     train_dir = os.path.join(base_path, train_dir)
     test_dir = os.path.join(base_path, test_dir)
 
-    optimal_n_epochs, optimal_learning_rate = grid_search(
-      dataset_name,
-      train_dir)
+    optimal_n_epochs, optimal_learning_rate, optimal_classifier_dropout = \
+      grid_search(dataset_name, train_dir)
 
-    print('evaluating on test set:', dataset_name, optimal_n_epochs, optimal_learning_rate)
     eval_on_test_set(
       dataset_name,
       train_dir,
       test_dir,
       optimal_n_epochs=optimal_n_epochs,
-      optimal_learning_rate=optimal_learning_rate)
-
-  # remove Results directory
+      optimal_learning_rate=optimal_learning_rate,
+      optimal_classifier_dropout=optimal_classifier_dropout)
 
 if __name__ == "__main__":
   "My kind of street"
