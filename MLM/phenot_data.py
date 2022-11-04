@@ -51,7 +51,7 @@ class PhenotypingDataset(Dataset):
       attention_mask = output.attention_mask.squeeze(),
       labels = self.y[index])
 
-  def load_examples(self, print_stats=False):
+  def load_examples(self, print_stats=False, use_unique_cuis=True):
     """Convert examples to lists of indices and get token count stats"""
 
     cui_counts = [] # n cuis in each sample
@@ -63,10 +63,13 @@ class PhenotypingDataset(Dataset):
 
       text = file_path.read_text()
       cui_list = text.split()
+      if use_unique_cuis == True:
+        cui_list = list(set(cui_list))
       cui_counts.append(len(cui_list))
 
       # strip 'C' and get the first max_length-2 (e.g. 510) CUIs
       cui_list = [cui[1:] for cui in cui_list[:max_length-2]]
+
       self.x.append(' '.join(cui_list))
 
     if print_stats:
