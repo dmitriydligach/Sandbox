@@ -8,7 +8,7 @@ from transformers import (TrainingArguments,
                           IntervalStrategy)
 
 # misc constants
-pretrained_model_path = '/home/dima/Models/CuiBert20Epochs/'
+pretrained_model_path = '/home/dima/Models/CuiBert512/checkpoint-250000/'
 output_dir = './Results'
 metric_for_best_model = 'eval_pr_auc'
 tokenizer_path = './CuiTokenizer'
@@ -20,7 +20,7 @@ batch_size = 48
 
 # search over these hyperparameters
 classifier_dropouts = [0.1, 0.25, 0.5]
-learning_rates = [2e-5, 3e-5, 5e-5, 7e-5, 8e-5]
+learning_rates = [2e-5, 3e-5, 5e-5, 7e-5]
 
 # datasets
 eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_cuis/'),
@@ -28,11 +28,50 @@ eval_datasets = [('alcohol', 'Alcohol/anc_notes_cuis/', 'Alcohol/anc_notes_test_
                  ('injury', 'Injury/Train/', 'Injury/Test/'),
                  ('opioids', 'Opioids1k/Train/', 'Opioids1k/Test/')]
 
+class WeightedTrainer(Trainer):
+  """ Need this to compute weighted loss"""
+
+  def __init__(
+    self,
+    model,
+    args,
+    train_dataset,
+    eval_dataset,
+    compute_metrics,
+    weights):
+    """Deconstruct the constructor"""
+
+    super(WeightedTrainer, self).__init__(
+      model=model,
+      args=args,
+      train_dataset=train_dataset,
+      eval_dataset=eval_dataset,
+      compute_metrics=compute_metrics)
+
+    self.weights = weights
+
+  def compute_loss(self, model, inputs, return_outputs=False):
+    """Weighted loss"""
+
+    labels = inputs.get("labels")
+
+    # forward pass
+    outputs = model(**inputs)
+    logits = outputs.get("logits")
+
+    # compute weighted loss
+    weights = self.weights.to(labels.device)
+    loss_fct = torch.nn.CrossEntropyLoss(weights)
+    loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+
+    return (loss, outputs) if return_outputs else loss
+
 def init_transformer(m: torch.nn.Module):
   """Jiacheng Zhang's transformer initialization wisdom"""
 
   for name, params in m.named_parameters():
     print('initializing:', name)
+
 
     if len(params.shape) >= 2:
       torch.nn.init.xavier_uniform_(params)
@@ -107,6 +146,9 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate, classifier_dropout):
   train_dataset = phenot_data.PhenotypingDataset(train_files, tokenizer_path)
   dev_dataset = phenot_data.PhenotypingDataset(dev_files, tokenizer_path)
 
+  label_counts = torch.bincount(torch.IntTensor(train_dataset.y))
+  weights = len(train_dataset.y) / (2.0 * label_counts)
+
   training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir=True,
@@ -119,12 +161,13 @@ def eval_on_dev_set(dataset_name, train_dir, learning_rate, classifier_dropout):
     save_strategy=IntervalStrategy.EPOCH,        # TODO: change to no
     evaluation_strategy=IntervalStrategy.EPOCH,
     disable_tqdm=True)
-  trainer = Trainer(
+  trainer = WeightedTrainer(
     model=model,
     args=training_args,
     train_dataset=train_dataset,
     eval_dataset=dev_dataset,
-    compute_metrics=compute_metrics)
+    compute_metrics=compute_metrics,
+    weights=weights)
   trainer.train()
 
   best_n_epochs = None
@@ -164,6 +207,9 @@ def eval_on_test_set(
   train_dataset = phenot_data.PhenotypingDataset(train_dir, tokenizer_path)
   test_dataset = phenot_data.PhenotypingDataset(test_dir, tokenizer_path)
 
+  label_counts = torch.bincount(torch.IntTensor(train_dataset.y))
+  weights = len(train_dataset.y) / (2.0 * label_counts)
+
   training_args = TrainingArguments(
     output_dir=output_dir,
     overwrite_output_dir=True,
@@ -175,10 +221,13 @@ def eval_on_test_set(
     save_strategy=IntervalStrategy.NO,
     evaluation_strategy=IntervalStrategy.NO,
     disable_tqdm=True)
-  trainer = Trainer(
+  trainer = WeightedTrainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset)
+    train_dataset=train_dataset,
+    eval_dataset=None,
+    compute_metrics=None,
+    weights=weights)
   trainer.train()
 
   predictions = trainer.predict(test_dataset)

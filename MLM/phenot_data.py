@@ -51,7 +51,7 @@ class PhenotypingDataset(Dataset):
       attention_mask = output.attention_mask.squeeze(),
       labels = self.y[index])
 
-  def load_examples(self, print_stats=False, use_unique_cuis=True):
+  def load_examples(self, print_stats=False, use_unique_cuis=False):
     """Convert examples to lists of indices and get token count stats"""
 
     cui_counts = [] # n cuis in each sample
