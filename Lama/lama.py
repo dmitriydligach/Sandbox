@@ -29,7 +29,7 @@ def main():
   end = time()
   print(f'\n[model load time: {end - start} seconds]\n')
 
-  while (True):
+  while(True):
 
     user_message = input('Prompt: ')
     prompt = f'<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n\n{user_message} [/INST]\n\n'
@@ -48,7 +48,7 @@ def main():
     for output in outputs:
       print('\n[***** begin generated text *****]\n')
       print(output['generated_text'])
-      print('\n[***** End generated text *****]\n')
+      print('\n[***** end generated text *****]\n')
 
     print(f'[inference time: {end - start} seconds]\n')
 if __name__ == "__main__":
