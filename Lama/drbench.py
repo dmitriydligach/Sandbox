@@ -4,10 +4,10 @@ import transformers, torch, os, pandas, string
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from time import time
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
 drbench_path = 'DrBench/Csv/summ_0821_test.csv'
-model_path = '/home/dima/Lama/Models/Llama-2-13b-chat-hf'
+model_path = '/home/dima/Lama/Models/Llama-2-70b-chat-hf'
 
 system_prompt = \
   """You are a physician. Please provide a concise summary of problems/diagnoses
