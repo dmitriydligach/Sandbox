@@ -15,12 +15,12 @@ system_prompt = \
   """You are a physician. Please provide a concise summary of problems/diagnoses
   based on the assessment below. Format the output as a bullet point list."""
 
-def calc_rougel(pred, gold):
+def calc_rougel(generated_text, reference_text):
   """Compute Rouge-L score"""
 
   # {'rougeL': Score(precision=0.5, recall=0.6, fmeasure=0.5)}
   scorer = rouge_scorer.RougeScorer(['rougeL'])
-  scores = scorer.score(gold, pred)
+  scores = scorer.score(reference_text, generated_text)
   f1 = scores['rougeL'].fmeasure
 
   return f1
@@ -65,9 +65,8 @@ def main(inputs_outputs):
   print(f'\n[model load time: {end - start} seconds]\n')
 
   f1s = []
-  for input, output in inputs_outputs:
-    user_message = input
-    prompt = f'<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n\n{user_message} [/INST]\n\n'
+  for input_text, reference_output in inputs_outputs:
+    prompt = f'<s>[INST] <<SYS>>\n{system_prompt}\n<</SYS>>\n\n\n{input_text} [/INST]\n\n'
 
     start = time()
     generated_outputs = pipeline(
@@ -80,11 +79,15 @@ def main(inputs_outputs):
       max_length=500)
     end = time()
 
+    # remove the the prompt from output
+    end_index = generated_outputs[0]['generated_text'].index('[/INST]')
+    generated_text = generated_outputs[0]['generated_text'][end_index+7:]
+
     print('\n[********** begin generated text **********]\n')
-    print(generated_outputs[0]['generated_text'])
+    print(generated_text)
     print('\n[********** end generated text **********]\n')
-    print(f'reference summary: {output}\n\n')
-    f1 = calc_rougel(generated_outputs[0]['generated_text'], output)
+    print(f'reference summary: {reference_output}\n\n')
+    f1 = calc_rougel(generated_text.lower(), reference_output.lower())
     f1s.append(f1)
     print(f'f1={f1}')
 
