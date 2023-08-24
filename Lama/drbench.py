@@ -5,14 +5,19 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from time import time
 from rouge_score import rouge_scorer
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
 drbench_path = 'DrBench/Csv/summ_0821_dev.csv'
 model_path = '/home/dima/Lama/Models/Llama-2-13b-chat-hf'
 
 system_prompt = 'You are a physician. Please provide a concise summary ' \
                 'of the problems/diagnoses based on the progress note text ' \
                 'below. Format the output as a bullet point list.'
+
+if '7b' in model_path:
+  os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+elif '13b' in model_path:
+  os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+elif '70b' in model_path:
+  os.environ['CUDA_VISIBLE_DEVICES'] = '2,3'
 
 def calc_rougel(generated_text, reference_text):
   """Compute Rouge-L score"""
