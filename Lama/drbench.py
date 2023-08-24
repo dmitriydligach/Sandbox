@@ -29,25 +29,6 @@ def calc_rougel(generated_text, reference_text):
 
   return f1
 
-def csv_to_assm_sum_tuples():
-  """Get summarization input/output pair tuples"""
-
-  data_csv = os.path.join(base_path, drbench_path)
-  df = pandas.read_csv(data_csv, dtype='str')
-
-  # input/output pairs
-  ios = []
-
-  for assm, sum in zip(df['Assessment'], df['Summary']):
-
-    # sometimes assm is empty and pandas returns a float
-    if type(assm) == str and type(sum) == str:
-      assm = ''.join(c for c in assm if c in string.printable)
-      sum = ''.join(c for c in sum if c in string.printable)
-      ios.append((assm, sum))
-
-  return ios
-
 def csv_to_io_tuples():
   """Get summarization input/output pair tuples"""
 
@@ -57,20 +38,16 @@ def csv_to_io_tuples():
   # input/output pairs
   ios = []
 
-  for assm, summ, subj, obj in \
-    zip(df['Assessment'], df['Summary'], df['S'], df['O']):
+  for assm, summ, subj in zip(df['Assessment'], df['Summary'], df['S']):
 
     # sometimes assm is empty and pandas returns a float
-    if type(assm) == str and type(summ) == str \
-       and type(subj) == str and type(obj) == str:
+    if type(assm) == str and type(summ) == str and type(subj) == str:
 
       assm = ''.join(c for c in assm if c in string.printable)
       summ = ''.join(c for c in summ if c in string.printable)
       subj = ''.join(c for c in subj if c in string.printable)
-      obj = ''.join(c for c in obj if c in string.printable)
 
       input_text = f'### Subjective Section ###\n\n{subj}\n\n' \
-                   f'### Objective Section ###\n\n{obj}\n\n' \
                    f'### Assessment Section ###\n\n{assm}'
       ios.append((input_text, summ))
 
@@ -131,6 +108,6 @@ if __name__ == "__main__":
 
   base_path = os.environ['DATA_ROOT']
 
-  ios = csv_to_io_tuples()
+  inputs_and_outputs = csv_to_io_tuples()
 
-  main(ios)
+  main(inputs_and_outputs)
