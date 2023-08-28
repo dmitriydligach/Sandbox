@@ -8,9 +8,10 @@ from rouge_score import rouge_scorer
 drbench_path = 'DrBench/Csv/summ_0821_dev.csv'
 model_path = '/home/dima/Lama/Models/Llama-2-13b-chat-hf'
 
-system_prompt = 'You are a physician. Please provide a concise summary ' \
-                'of the problems/diagnoses based on the progress note text ' \
-                'below. Format the output as a bullet point list.'
+system_prompt = 'You are a physician. Please list the most important ' \
+                'problems/diagnoses based on the progress note text ' \
+                'below. Only list the problems/diagnoses and nothing else. ' \
+                'Be concise.'
 
 if '7b' in model_path:
   os.environ['CUDA_VISIBLE_DEVICES'] = '0'
