@@ -20,13 +20,10 @@ model_path = f'/home/dima/Lama/Models/Llama-2-{lama_size}-chat-hf'
 # Define and parse arguments.
 @dataclass
 class ScriptArguments:
-    """
-    The name of the Casual LM model we wish to fine with SFTTrainer
-    """
+    """Parameters and their default settings"""
 
     dataset_name: Optional[str] = field(
-        default="timdettmers/openassistant-guanaco", metadata={"help": "the dataset name"}
-    )
+        default="timdettmers/openassistant-guanaco", metadata={"help": "the dataset name"})
     dataset_text_field: Optional[str] = field(
         default="text", metadata={"help": "the text field of the dataset"})
     log_with: Optional[str] = field(
@@ -38,10 +35,9 @@ class ScriptArguments:
     seq_length: Optional[int] = field(
         default=512, metadata={"help": "Input sequence length"})
     gradient_accumulation_steps: Optional[int] = field(
-        default=16, metadata={"help": "the number of gradient accumulation steps"}
-    )
+        default=16, metadata={"help": "the number of gradient accumulation steps"})
     load_in_8bit: Optional[bool] = field(
-        default=False, metadata={"help": "load the model in 8 bits precision"})
+        default=True, metadata={"help": "load the model in 8 bits precision"})
     load_in_4bit: Optional[bool] = field(
         default=False, metadata={"help": "load the model in 4 bits precision"})
     use_peft: Optional[bool] = field(
@@ -76,27 +72,27 @@ elif script_args.load_in_8bit or script_args.load_in_4bit:
     quantization_config = BitsAndBytesConfig(
         load_in_8bit=script_args.load_in_8bit, load_in_4bit=script_args.load_in_4bit)
     # Copy the model to each device
-    device_map = {"": Accelerator().local_process_index}
+
+    # todo: not sure what this does!
+    # device_map = {"": Accelerator().local_process_index}
+    device_map = 'auto'
+
     torch_dtype = torch.bfloat16
 else:
     device_map = None
     quantization_config = None
     torch_dtype = None
 
-# this is from the TRL example:
-# model = AutoModelForCausalLM.from_pretrained(
-#     script_args.model_name,
-#     quantization_config=quantization_config,
-#     device_map=device_map,
-#     trust_remote_code=script_args.trust_remote_code,
-#     torch_dtype=torch_dtype,
-#     use_auth_token=script_args.use_auth_token,
-# )
-
 model = AutoModelForCausalLM.from_pretrained(
     model_path,
-    device_map='auto',
-    load_in_8bit=True)
+    quantization_config=quantization_config,
+    device_map=device_map,
+    torch_dtype=torch_dtype)
+
+# model = AutoModelForCausalLM.from_pretrained(
+#     model_path,
+#     device_map='auto',
+#     load_in_8bit=True)
 
 # Step 2: Load the dataset
 dataset = load_dataset(script_args.dataset_name, split="train")
