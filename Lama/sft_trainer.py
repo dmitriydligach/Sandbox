@@ -41,7 +41,7 @@ class ScriptArguments:
     load_in_4bit: Optional[bool] = field(
         default=False, metadata={"help": "load the model in 4 bits precision"})
     use_peft: Optional[bool] = field(
-        default=False, metadata={"help": "Wether to use PEFT or not to train adapters"})
+        default=True, metadata={"help": "Wether to use PEFT or not to train adapters"})
     trust_remote_code: Optional[bool] = field(
         default=True, metadata={"help": "Enable `trust_remote_code`"})
     output_dir: Optional[str] = field(
@@ -57,8 +57,7 @@ class ScriptArguments:
     max_steps: Optional[int] = field(
         default=-1, metadata={"help": "the number of training steps"})
     save_steps: Optional[int] = field(
-        default=100, metadata={"help": "Number of updates steps before two checkpoint saves"}
-    )
+        default=100, metadata={"help": "Number of updates steps before two checkpoint saves"})
     save_total_limit: Optional[int] = field(
         default=10, metadata={"help": "Limits total number of checkpoints."})
 
@@ -71,8 +70,8 @@ if script_args.load_in_8bit and script_args.load_in_4bit:
 elif script_args.load_in_8bit or script_args.load_in_4bit:
     quantization_config = BitsAndBytesConfig(
         load_in_8bit=script_args.load_in_8bit, load_in_4bit=script_args.load_in_4bit)
-    # Copy the model to each device
 
+    # Copy the model to each device
     # todo: not sure what this does!
     # device_map = {"": Accelerator().local_process_index}
     device_map = 'auto'
@@ -129,8 +128,7 @@ trainer = SFTTrainer(
     max_seq_length=script_args.seq_length,
     train_dataset=dataset,
     dataset_text_field=script_args.dataset_text_field,
-    peft_config=peft_config,
-)
+    peft_config=peft_config)
 
 trainer.train()
 
