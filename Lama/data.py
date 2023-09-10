@@ -11,11 +11,10 @@ system_prompt = 'You are a physician. Please list the most important ' \
                 'below. Only list the problems/diagnoses and nothing else. ' \
                 'Be concise.'
 
-def csv_to_fine_tune_data():
+def csv_to_fine_tune_data(data_csv_path):
   """Format training data for fine-tuning and make a HF dataset"""
 
-  data_csv = os.path.join(base_path, drbench_train_path)
-  df = pandas.read_csv(data_csv, dtype='str')
+  df = pandas.read_csv(data_csv_path, dtype='str')
 
   # input/output pairs
   train_samples = []
@@ -32,9 +31,10 @@ def csv_to_fine_tune_data():
       train_samples.append(train_text)
 
   data = datasets.Dataset.from_dict({'text': train_samples})
-  split_data = data.train_test_split(test_size=0.2, shuffle=True)
+  # split_data = data.train_test_split(test_size=0.2, shuffle=True)
+  # return split_data
 
-  return split_data
+  return data
 
 def csv_to_zero_shot_data():
   """Get summarization input/output pair tuples"""
@@ -60,13 +60,9 @@ def csv_to_zero_shot_data():
 
   return ios
 
-def main():
-  """My main man"""
-
 if __name__ == "__main__":
 
   base_path = os.environ['DATA_ROOT']
-  data = csv_to_fine_tune_data()
-  print(data)
+  data_csv_path = os.path.join(base_path, drbench_train_path)
 
-  main()
+  data = csv_to_fine_tune_data(data_csv_path)

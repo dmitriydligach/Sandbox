@@ -3,9 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Optional
 
-import torch
-from accelerate import Accelerator
-from datasets import load_dataset
+import torch, os, data
 from peft import LoraConfig
 from tqdm import tqdm
 from transformers import AutoModelForCausalLM, BitsAndBytesConfig, HfArgumentParser, TrainingArguments
@@ -16,6 +14,10 @@ tqdm.pandas()
 
 lama_size = '7b'
 model_path = f'/home/dima/Lama/Models/Llama-2-{lama_size}-chat-hf'
+
+base_path = os.environ['DATA_ROOT']
+drbench_train_path = 'DrBench/Csv/summ_0821_train.csv'
+data_csv_path = os.path.join(base_path, drbench_train_path)
 
 # Define and parse arguments.
 @dataclass
@@ -94,7 +96,9 @@ model = AutoModelForCausalLM.from_pretrained(
 #     load_in_8bit=True)
 
 # Step 2: Load the dataset
-dataset = load_dataset(script_args.dataset_name, split="train")
+# HF example only uses 'train' split; where about validation data?
+# dataset = load_dataset(script_args.dataset_name, split="train")
+dataset = data.csv_to_fine_tune_data(data_csv_path)
 
 # Step 3: Define the training arguments
 training_args = TrainingArguments(
