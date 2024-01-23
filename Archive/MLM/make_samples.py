@@ -49,4 +49,4 @@ def extract_notes():
 
 if __name__ == "__main__":
 
-  extract_cuis()
+  extract_notes()
