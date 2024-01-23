@@ -44,7 +44,7 @@ def extract_notes():
 
   for text in frame.TEXT:
     printable = ''.join(c for c in text if c in string.printable)
-    printable = printable.replace('\n', '')
+    # printable = printable.replace('\n', '') # problem: this merges words from different lines
     outfile.write(printable + '\n')
 
 if __name__ == "__main__":
