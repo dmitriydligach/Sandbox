@@ -11,20 +11,21 @@ def extract_notes():
   """Write all mimic notes to one file for viewing"""
 
   outfile = open(out_file, 'w')
-  frame = pandas.read_csv(mimic_notes_file, dtype='str', nrows=None)
+  df = pandas.read_csv(mimic_notes_file, dtype='str', nrows=None)
 
-  for id, adm, cat, text in \
-   zip(frame.ROW_ID, frame.HADM_ID, frame.CATEGORY, frame.TEXT):
+  for row_id, adm_id, cat, cgid, text in \
+   zip(df.ROW_ID, df.HADM_ID, df.CATEGORY, df.CGID, df.TEXT):
 
     # remove non-printable characters for ctakes
     printable = ''.join(c for c in text if c in string.printable)
 
     # print header
-    outfile.write('='*75 + '\n')
-    outfile.write(f'Admission ID: {adm}\n')
-    outfile.write(f'Note ID: {id}\n')
+    outfile.write('='*80 + '\n')
+    outfile.write(f'Note ID: {row_id}\n')
+    outfile.write(f'Admission ID: {adm_id}\n')
     outfile.write(f'Note type: {cat}\n')
-    outfile.write('='*75 + '\n\n')
+    outfile.write(f'Caregiver ID: {cgid}\n')
+    outfile.write('='*80 + '\n\n')
 
     outfile.write(printable + '\n\n')
 
